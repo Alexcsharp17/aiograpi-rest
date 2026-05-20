@@ -582,9 +582,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <h2 id="summary">Summary</h2>
 <ul>
 <li>Public <code>aiograpi.Client</code> methods: <strong>500</strong></li>
-<li>Methods reached by REST routes: <strong>257</strong></li>
-<li>Methods not exposed as REST routes: <strong>243</strong></li>
-<li>Candidate REST backlog: <strong>18</strong></li>
+<li>Methods reached by REST routes: <strong>263</strong></li>
+<li>Methods not exposed as REST routes: <strong>237</strong></li>
+<li>Candidate REST backlog: <strong>12</strong></li>
 </ul>
 <h2 id="rest-relevance">REST Relevance</h2>
 <table>
@@ -598,12 +598,12 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tbody>
 <tr>
 <td><code>exposed</code></td>
-<td style="text-align: right;">257</td>
+<td style="text-align: right;">263</td>
 <td>Already used by public REST routes.</td>
 </tr>
 <tr>
 <td><code>candidate</code></td>
-<td style="text-align: right;">18</td>
+<td style="text-align: right;">12</td>
 <td>Likely useful as a future user-facing REST endpoint.</td>
 </tr>
 <tr>
@@ -681,8 +681,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>clip</code></td>
-<td style="text-align: right;">3</td>
-<td style="text-align: right;">6</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">10</td>
@@ -927,10 +927,6 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>album_upload_with_music</code></td>
 </tr>
 <tr>
-<td><code>clip</code></td>
-<td><code>clip_info_for_creation</code>, <code>clip_pin</code>, <code>clip_share_to_fb_config</code>, <code>clip_trial_eligible</code>, <code>clip_unpin</code>, <code>clip_upload_as_reel_with_music</code></td>
-</tr>
-<tr>
 <td><code>explore</code></td>
 <td><code>report_explore_media</code></td>
 </tr>
@@ -1118,6 +1114,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>totp_enable</code></td>
 </tr>
 <tr>
+<td><code>GET /clip/creation/info</code></td>
+<td><code>clip_info_for_creation</code></td>
+</tr>
+<tr>
 <td><code>GET /clip/download</code></td>
 <td><code>clip_download</code></td>
 </tr>
@@ -1126,8 +1126,24 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>clip_download_by_url</code></td>
 </tr>
 <tr>
+<td><code>DELETE /clip/pin</code></td>
+<td><code>clip_unpin</code></td>
+</tr>
+<tr>
+<td><code>POST /clip/pin</code></td>
+<td><code>clip_pin</code></td>
+</tr>
+<tr>
+<td><code>GET /clip/share/facebook/config</code></td>
+<td><code>clip_share_to_fb_config</code></td>
+</tr>
+<tr>
 <td><code>GET /clip/template</code></td>
 <td><code>media_template_v1</code></td>
+</tr>
+<tr>
+<td><code>GET /clip/trial-eligibility</code></td>
+<td><code>clip_trial_eligible</code></td>
 </tr>
 <tr>
 <td><code>POST /clip/upload</code></td>
@@ -1136,6 +1152,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>POST /clip/upload/by/url</code></td>
 <td><code>clip_upload</code></td>
+</tr>
+<tr>
+<td><code>POST /clip/upload/with/music</code></td>
+<td><code>clip_upload_as_reel_with_music</code></td>
 </tr>
 <tr>
 <td><code>POST /direct/cutout/sticker</code></td>
@@ -2264,37 +2284,37 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>clip_info_for_creation(self) -&gt; Dict</code></td>
 <td><code>clip</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /clip/creation/info</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>clip_pin(self, media_pk: str, revert: bool = False) -&gt; bool</code></td>
 <td><code>clip</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>POST /clip/pin</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>clip_share_to_fb_config(self, device_status: Optional[Dict[str, object]] = None) -&gt; Dict</code></td>
 <td><code>clip</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /clip/share/facebook/config</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>clip_trial_eligible(self) -&gt; bool</code></td>
 <td><code>clip</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /clip/trial-eligibility</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>clip_unpin(self, media_pk: str) -&gt; bool</code></td>
 <td><code>clip</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>DELETE /clip/pin</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>clip_upload(self, path: pathlib._local.Path, caption: str, thumbnail: pathlib._local.Path = None, usertags: List[aiograpi.types.Usertag] = [], location: aiograpi.types.Location = None, configure_timeout: int = 10, feed_show: str = '1', extra_data: Dict[str, object] = {}, trial: bool = False, trial_graduation_strategy: str = 'manual') -&gt; aiograpi.types.Media</code></td>
@@ -2306,9 +2326,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>clip_upload_as_reel_with_music(self, path: pathlib._local.Path, caption: str, track: aiograpi.types.Track, extra_data: Dict[str, str] = {}) -&gt; aiograpi.types.Media</code></td>
 <td><code>clip</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>POST /clip/upload/with/music</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>close_friend_add(self, user_id: str)</code></td>

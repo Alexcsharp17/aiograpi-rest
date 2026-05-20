@@ -518,10 +518,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#livestreams-and-templates" class="md-nav__link">
+  <a href="#livestreams" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Livestreams And Templates
+        Livestreams
       
     </span>
   </a>
@@ -865,10 +865,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#livestreams-and-templates" class="md-nav__link">
+  <a href="#livestreams" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Livestreams And Templates
+        Livestreams
       
     </span>
   </a>
@@ -1157,6 +1157,22 @@ objects. They accept <code>amount</code> and <code>last_media_pk</code> where th
 <li><code>GET /reels/explore</code> returns Explore Reels media.</li>
 <li><code>GET /reels/timeline</code> returns Reels media for a <code>collection_pk</code>.</li>
 </ul>
+<p>Clip upload and utility routes live under the <code>Clip (Reels)</code> tag:</p>
+<ul>
+<li><code>GET /clip/creation/info</code> returns the raw Reel creation preflight config.</li>
+<li><code>GET /clip/trial-eligibility</code> checks whether Trial Reels are enabled for the
+  authenticated account.</li>
+<li><code>GET /clip/share/facebook/config</code> returns Facebook sharing config; pass
+  <code>device_status</code> as an optional JSON-encoded query parameter.</li>
+<li><code>GET /clip/template</code> returns the raw clip template payload for a source
+  <code>media_id</code>.</li>
+<li><code>POST /clip/upload</code> uploads a Reel from a video file.</li>
+<li><code>POST /clip/upload/by/url</code> uploads a Reel from a video URL.</li>
+<li><code>POST /clip/upload/with/music</code> uploads a Reel from a video file with a
+  JSON-encoded <code>track</code> payload and optional JSON-encoded <code>extra_data</code>.</li>
+<li><code>POST /clip/pin</code> pins a Reel by <code>media_pk</code>.</li>
+<li><code>DELETE /clip/pin</code> unpins a Reel by <code>media_pk</code>.</li>
+</ul>
 <h2 id="saved-collections">Saved Collections</h2>
 <p>Saved collection routes live under the authenticated account context because
 they read the current account's saved Instagram collections.</p>
@@ -1184,7 +1200,7 @@ workflows.</p>
 <li><code>GET /track/download/by/url</code> downloads track audio from a URL.</li>
 <li><code>GET /music/feed/browser</code> returns music candidates for feed posts.</li>
 </ul>
-<h2 id="livestreams-and-templates">Livestreams And Templates</h2>
+<h2 id="livestreams">Livestreams</h2>
 <p>Livestream routes manage the authenticated account's Instagram Live broadcast
 state. They are exposed as resource state changes instead of <code>start</code>/<code>end</code>
 action paths:</p>
@@ -1196,8 +1212,6 @@ action paths:</p>
   <code>ended</code>.</li>
 <li><code>GET /media/livestream/comments</code> lists live comments for a <code>broadcast_id</code>.</li>
 <li><code>GET /media/livestream/viewers</code> lists live viewers for a <code>broadcast_id</code>.</li>
-<li><code>GET /clip/template</code> returns the raw clip template payload for a source
-  <code>media_id</code>.</li>
 </ul>
 <h2 id="notes">Notes</h2>
 <ul>
@@ -1291,6 +1305,10 @@ endpoints for photo, video, clip/Reels, IGTV, album/carousel, and the media
 edit endpoint accept <code>usertags</code> as one JSON array or repeated JSON-encoded
 <code>Usertag</code> values, and <code>location</code> as one JSON-encoded <code>Location</code> object. Leave
 these fields empty or omit them when no metadata is needed.</p>
+<p>Reel music upload and creation helpers also use JSON strings: <code>track</code> is a
+JSON-encoded <code>Track</code> object returned by music search/browser routes,
+<code>extra_data</code> is optional Reel configure data, and <code>device_status</code> is an
+optional JSON object for <code>GET /clip/share/facebook/config</code>.</p>
 <h2 id="system-endpoints">System Endpoints</h2>
 <ul>
 <li><code>GET /health</code> returns <code>{"status":"ok"}</code> for liveness.</li>
