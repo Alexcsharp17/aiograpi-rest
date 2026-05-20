@@ -582,9 +582,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <h2 id="summary">Summary</h2>
 <ul>
 <li>Public <code>aiograpi.Client</code> methods: <strong>500</strong></li>
-<li>Methods reached by REST routes: <strong>239</strong></li>
-<li>Methods not exposed as REST routes: <strong>261</strong></li>
-<li>Candidate REST backlog: <strong>36</strong></li>
+<li>Methods reached by REST routes: <strong>244</strong></li>
+<li>Methods not exposed as REST routes: <strong>256</strong></li>
+<li>Candidate REST backlog: <strong>31</strong></li>
 </ul>
 <h2 id="rest-relevance">REST Relevance</h2>
 <table>
@@ -598,12 +598,12 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tbody>
 <tr>
 <td><code>exposed</code></td>
-<td style="text-align: right;">239</td>
+<td style="text-align: right;">244</td>
 <td>Already used by public REST routes.</td>
 </tr>
 <tr>
 <td><code>candidate</code></td>
-<td style="text-align: right;">36</td>
+<td style="text-align: right;">31</td>
 <td>Likely useful as a future user-facing REST endpoint.</td>
 </tr>
 <tr>
@@ -897,8 +897,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>user</code></td>
-<td style="text-align: right;">41</td>
-<td style="text-align: right;">5</td>
+<td style="text-align: right;">46</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">22</td>
 <td style="text-align: right;">6</td>
 <td style="text-align: right;">74</td>
@@ -963,10 +963,6 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>totp_generate_code</code>, <code>totp_generate_seed</code></td>
 </tr>
 <tr>
-<td><code>user</code></td>
-<td><code>feed_user_stream_item</code>, <code>user_stream_by_id_flat</code>, <code>user_stream_by_id_v1</code>, <code>user_stream_by_username_flat</code>, <code>user_stream_by_username_v1</code></td>
-</tr>
-<tr>
 <td><code>video</code></td>
 <td><code>video_upload_to_direct</code></td>
 </tr>
@@ -1028,6 +1024,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>GET /account/feed/timeline</code></td>
 <td><code>get_timeline_feed</code></td>
+</tr>
+<tr>
+<td><code>GET /account/feed/user/stream-item</code></td>
+<td><code>feed_user_stream_item</code></td>
 </tr>
 <tr>
 <td><code>DELETE /account/follow/request</code></td>
@@ -1848,6 +1848,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>GET /user/stories</code></td>
 <td><code>user_stories</code></td>
+</tr>
+<tr>
+<td><code>GET /user/stream</code></td>
+<td><code>user_stream_by_id_flat</code>, <code>user_stream_by_id_v1</code>, <code>user_stream_by_username_flat</code>, <code>user_stream_by_username_v1</code></td>
 </tr>
 <tr>
 <td><code>GET /user/suggestions</code></td>
@@ -2906,9 +2910,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>feed_user_stream_item(self, item_id: str, is_pull_to_refresh: bool = False) -&gt; dict</code></td>
 <td><code>user</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /account/feed/user/stream-item</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>fetch_fb_dtsg(self)</code></td>
@@ -5132,30 +5136,30 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>user_stream_by_id_flat(self, user_id: str) -&gt; dict</code></td>
 <td><code>user</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /user/stream</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>user_stream_by_id_v1(self, user_id: str) -&gt; dict</code></td>
 <td><code>user</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /user/stream</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>user_stream_by_username_flat(self, username: str) -&gt; dict</code></td>
 <td><code>user</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /user/stream</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>user_stream_by_username_v1(self, username: str) -&gt; dict</code></td>
 <td><code>user</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /user/stream</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>user_unblock(self, user_id: str, surface: str = 'profile') -&gt; bool</code></td>

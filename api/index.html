@@ -1093,11 +1093,16 @@ Instagram-shaped objects where <code>aiograpi</code> exposes variable discovery 
   <code>{ "user": ..., "info": ... }</code>.</li>
 <li><code>GET /user/profile/web</code> returns Instagram's web-profile payload for a
   username.</li>
+<li><code>GET /user/stream</code> returns a profile stream by <code>user_id</code> or <code>username</code>.
+  <code>view=flat</code> returns the merged user payload; <code>view=raw</code> returns Instagram's
+  stream envelope.</li>
 <li><code>GET /user/friendships</code> returns relationship summaries for repeated
   <code>user_ids</code> query parameters.</li>
 </ul>
 <p><code>GET /account/feed/new</code> belongs to the authenticated account context and returns
-whether Instagram says new timeline feed items are available.</p>
+whether Instagram says new timeline feed items are available.
+<code>GET /account/feed/user/stream-item</code> returns a feed stream item for the
+authenticated account.</p>
 <h2 id="reels">Reels</h2>
 <p>Global Reels feed routes live under the <code>Reels</code> tag and return arrays of media
 objects. They accept <code>amount</code> and <code>last_media_pk</code> where the underlying
