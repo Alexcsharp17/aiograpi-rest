@@ -441,6 +441,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#share" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Share
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#user-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -744,6 +755,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#share" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Share
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#user-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1016,6 +1038,15 @@ be passed directly into OpenAPI client generators.</p>
 <code>/search/accounts</code>, <code>/search/typeahead</code>, <code>/search/typeahead/stream</code>, and
 <code>/search/item</code> return raw Instagram-shaped objects because their payloads vary
 by ranking surface and cursor state.</p>
+<h2 id="share">Share</h2>
+<p>Share routes decode Instagram share URLs or encoded share codes without creating
+or changing Instagram state.</p>
+<ul>
+<li><code>GET /share?url=...</code> returns the decoded share <code>type</code>, <code>pk</code>, and extracted
+  <code>code</code> for a share URL.</li>
+<li><code>GET /share?code=...</code> returns the decoded share <code>type</code>, <code>pk</code>, and original
+  <code>code</code> for an encoded share code.</li>
+</ul>
 <h2 id="user-discovery">User Discovery</h2>
 <p>User discovery routes live under the target user context and return raw
 Instagram-shaped objects where <code>aiograpi</code> exposes variable discovery payloads:</p>

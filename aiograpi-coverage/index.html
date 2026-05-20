@@ -582,9 +582,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <h2 id="summary">Summary</h2>
 <ul>
 <li>Public <code>aiograpi.Client</code> methods: <strong>500</strong></li>
-<li>Methods reached by REST routes: <strong>231</strong></li>
-<li>Methods not exposed as REST routes: <strong>269</strong></li>
-<li>Candidate REST backlog: <strong>44</strong></li>
+<li>Methods reached by REST routes: <strong>234</strong></li>
+<li>Methods not exposed as REST routes: <strong>266</strong></li>
+<li>Candidate REST backlog: <strong>41</strong></li>
 </ul>
 <h2 id="rest-relevance">REST Relevance</h2>
 <table>
@@ -598,12 +598,12 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tbody>
 <tr>
 <td><code>exposed</code></td>
-<td style="text-align: right;">231</td>
+<td style="text-align: right;">234</td>
 <td>Already used by public REST routes.</td>
 </tr>
 <tr>
 <td><code>candidate</code></td>
-<td style="text-align: right;">44</td>
+<td style="text-align: right;">41</td>
 <td>Likely useful as a future user-facing REST endpoint.</td>
 </tr>
 <tr>
@@ -849,8 +849,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>share</code></td>
-<td style="text-align: right;">0</td>
 <td style="text-align: right;">3</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">3</td>
@@ -957,10 +957,6 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>photo</code></td>
 <td><code>photo_upload_with_music</code></td>
-</tr>
-<tr>
-<td><code>share</code></td>
-<td><code>share_code_from_url</code>, <code>share_info</code>, <code>share_info_by_url</code></td>
 </tr>
 <tr>
 <td><code>story</code></td>
@@ -1660,6 +1656,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>GET /search/web/top</code></td>
 <td><code>web_search_topsearch</code></td>
+</tr>
+<tr>
+<td><code>GET /share</code></td>
+<td><code>share_code_from_url</code>, <code>share_info</code>, <code>share_info_by_url</code></td>
 </tr>
 <tr>
 <td><code>DELETE /story</code></td>
@@ -4533,23 +4533,23 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>share_code_from_url(self, url: str) -&gt; str</code></td>
 <td><code>share</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /share</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>share_info(self, code: str) -&gt; aiograpi.types.Share</code></td>
 <td><code>share</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /share</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>share_info_by_url(self, url: str) -&gt; aiograpi.types.Share</code></td>
 <td><code>share</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /share</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>signup(self, username: str, password: str, email: str = '', phone_number: str = '', full_name: str = '', year: int = None, month: int = None, day: int = None) -&gt; aiograpi.types.UserShort</code></td>
