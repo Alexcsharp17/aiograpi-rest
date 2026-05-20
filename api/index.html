@@ -397,6 +397,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#account-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Account Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#openapi" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -678,6 +689,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#account-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Account Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#openapi" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -904,6 +926,23 @@ check account and proxy health before retrying.</p>
 <li><code>DELETE /user/notifications/reels</code> disables Reel notifications for a user.</li>
 <li><code>POST /user/notifications/videos</code> enables video notifications for a user.</li>
 <li><code>DELETE /user/notifications/videos</code> disables video notifications for a user.</li>
+</ul>
+<h2 id="account-settings">Account Settings</h2>
+<ul>
+<li><code>GET /account/security</code> returns security metadata for the authenticated
+  account.</li>
+<li><code>PATCH /account/biography</code> updates only the authenticated account biography.</li>
+<li><code>PATCH /account/external-url</code> replaces the authenticated account external
+  profile URL.</li>
+<li><code>DELETE /account/external-url</code> clears the authenticated account external URL
+  by asking Instagram to replace it with an empty URL. If Instagram rejects an
+  empty URL for the account, remove the concrete bio link via
+  <code>DELETE /account/bio-links</code>.</li>
+<li><code>DELETE /account/bio-links</code> removes one or more bio links by <code>link_ids</code>.</li>
+<li><code>PATCH /account/password</code> changes the authenticated account password.</li>
+<li><code>POST /account/password/reset</code> sends a password reset flow for a username.</li>
+<li><code>POST /account/email/confirm</code> sends an email confirmation code.</li>
+<li><code>POST /account/phone/confirm</code> sends a phone confirmation code.</li>
 </ul>
 <h2 id="openapi">OpenAPI</h2>
 <ul>

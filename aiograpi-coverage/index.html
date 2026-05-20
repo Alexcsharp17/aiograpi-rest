@@ -582,9 +582,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <h2 id="summary">Summary</h2>
 <ul>
 <li>Public <code>aiograpi.Client</code> methods: <strong>500</strong></li>
-<li>Methods reached by REST routes: <strong>221</strong></li>
-<li>Methods not exposed as REST routes: <strong>279</strong></li>
-<li>Candidate REST backlog: <strong>78</strong></li>
+<li>Methods reached by REST routes: <strong>229</strong></li>
+<li>Methods not exposed as REST routes: <strong>271</strong></li>
+<li>Candidate REST backlog: <strong>70</strong></li>
 </ul>
 <h2 id="rest-relevance">REST Relevance</h2>
 <table>
@@ -598,12 +598,12 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tbody>
 <tr>
 <td><code>exposed</code></td>
-<td style="text-align: right;">221</td>
+<td style="text-align: right;">229</td>
 <td>Already used by public REST routes.</td>
 </tr>
 <tr>
 <td><code>candidate</code></td>
-<td style="text-align: right;">78</td>
+<td style="text-align: right;">70</td>
 <td>Likely useful as a future user-facing REST endpoint.</td>
 </tr>
 <tr>
@@ -633,8 +633,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tbody>
 <tr>
 <td><code>account</code></td>
-<td style="text-align: right;">6</td>
-<td style="text-align: right;">8</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">14</td>
@@ -923,10 +923,6 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </thead>
 <tbody>
 <tr>
-<td><code>account</code></td>
-<td><code>account_security_info</code>, <code>account_set_biography</code>, <code>change_password</code>, <code>remove_bio_links</code>, <code>reset_password</code>, <code>send_confirm_email</code>, <code>send_confirm_phone_number</code>, <code>set_external_url</code></td>
-</tr>
-<tr>
 <td><code>album</code></td>
 <td><code>album_upload_with_music</code></td>
 </tr>
@@ -1006,6 +1002,14 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>account_edit</code></td>
 </tr>
 <tr>
+<td><code>DELETE /account/bio-links</code></td>
+<td><code>remove_bio_links</code></td>
+</tr>
+<tr>
+<td><code>PATCH /account/biography</code></td>
+<td><code>account_set_biography</code></td>
+</tr>
+<tr>
 <td><code>GET /account/collection</code></td>
 <td><code>collection_pk_by_name</code>, <code>collections</code></td>
 </tr>
@@ -1016,6 +1020,18 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>GET /account/collections</code></td>
 <td><code>collections</code></td>
+</tr>
+<tr>
+<td><code>POST /account/email/confirm</code></td>
+<td><code>send_confirm_email</code></td>
+</tr>
+<tr>
+<td><code>DELETE /account/external-url</code></td>
+<td><code>set_external_url</code></td>
+</tr>
+<tr>
+<td><code>PATCH /account/external-url</code></td>
+<td><code>set_external_url</code></td>
 </tr>
 <tr>
 <td><code>GET /account/feed/new</code></td>
@@ -1050,12 +1066,28 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>liked_medias</code></td>
 </tr>
 <tr>
+<td><code>PATCH /account/password</code></td>
+<td><code>change_password</code></td>
+</tr>
+<tr>
+<td><code>POST /account/password/reset</code></td>
+<td><code>reset_password</code></td>
+</tr>
+<tr>
+<td><code>POST /account/phone/confirm</code></td>
+<td><code>send_confirm_phone_number</code></td>
+</tr>
+<tr>
 <td><code>PATCH /account/picture</code></td>
 <td><code>account_change_picture</code></td>
 </tr>
 <tr>
 <td><code>PATCH /account/privacy</code></td>
 <td><code>account_set_private</code>, <code>account_set_public</code></td>
+</tr>
+<tr>
+<td><code>GET /account/security</code></td>
+<td><code>account_security_info</code></td>
 </tr>
 <tr>
 <td><code>GET /album/download</code></td>
@@ -1883,16 +1915,16 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>account_security_info(self) -&gt; dict</code></td>
 <td><code>account</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /account/security</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>account_set_biography(self, biography: str) -&gt; bool</code></td>
 <td><code>account</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>PATCH /account/biography</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>account_set_private(self) -&gt; bool</code></td>
@@ -2114,9 +2146,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>change_password(self, old_password: str, new_password: str) -&gt; bool</code></td>
 <td><code>account</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>PATCH /account/password</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>change_password_handler(self, username: str)</code></td>
@@ -4284,9 +4316,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>remove_bio_links(self, link_ids: list) -&gt; dict</code></td>
 <td><code>account</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>DELETE /account/bio-links</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>report_explore_media(self, media_pk: int)</code></td>
@@ -4305,9 +4337,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>reset_password(self, username: str) -&gt; Dict</code></td>
 <td><code>account</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>POST /account/password/reset</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>search_followers(self, user_id: str, query: str) -&gt; List[aiograpi.types.UserShort]</code></td>
@@ -4368,16 +4400,16 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>send_confirm_email(self, email: str) -&gt; dict</code></td>
 <td><code>account</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>POST /account/email/confirm</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>send_confirm_phone_number(self, phone_number: str) -&gt; dict</code></td>
 <td><code>account</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>POST /account/phone/confirm</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>send_signup_sms_code(self, phone_number: str)</code></td>
@@ -4431,9 +4463,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>set_external_url(self, external_url) -&gt; dict</code></td>
 <td><code>account</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>DELETE /account/external-url</code><br><code>PATCH /account/external-url</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>set_ig_u_rur(self, value)</code></td>
