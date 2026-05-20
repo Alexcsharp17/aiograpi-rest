@@ -485,6 +485,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#direct" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Direct
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pagination" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -755,6 +766,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#direct" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Direct
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pagination" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -989,12 +1011,25 @@ belong to a media object.</p>
 <li><code>POST /media/comment/check/offensive</code> checks whether text is offensive for
   the target media.</li>
 </ul>
+<h2 id="direct">Direct</h2>
+<ul>
+<li><code>GET /direct/pending/inbox</code> lists pending direct request threads up to
+  <code>amount</code>.</li>
+<li><code>GET /direct/spam/inbox</code> lists spam direct request threads up to <code>amount</code>.</li>
+<li><code>POST /direct/request/approve</code> approves a direct message request thread.</li>
+<li><code>POST /direct/thread/message</code> replies in an existing direct thread.</li>
+<li><code>DELETE /direct/message</code> unsends a direct message.</li>
+<li><code>POST /direct/cutout/sticker</code> sends a cutout sticker to either <code>user_ids</code>
+  or <code>thread_ids</code>.</li>
+</ul>
 <h2 id="pagination">Pagination</h2>
 <p>Paginated read-list routes return an object with <code>items</code> and <code>next_cursor</code>.
 Pass the returned <code>next_cursor</code> as <code>cursor</code> on the next request to continue
 from the previous page. This shape is used for:</p>
 <ul>
 <li><code>GET /direct/inbox</code></li>
+<li><code>GET /direct/pending</code></li>
+<li><code>GET /direct/spam</code></li>
 <li><code>GET /hashtag/media/recent</code></li>
 <li><code>GET /hashtag/media/top</code></li>
 <li><code>GET /location/media/recent</code></li>
