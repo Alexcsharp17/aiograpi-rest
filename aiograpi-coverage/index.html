@@ -582,9 +582,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <h2 id="summary">Summary</h2>
 <ul>
 <li>Public <code>aiograpi.Client</code> methods: <strong>500</strong></li>
-<li>Methods reached by REST routes: <strong>210</strong></li>
-<li>Methods not exposed as REST routes: <strong>290</strong></li>
-<li>Candidate REST backlog: <strong>93</strong></li>
+<li>Methods reached by REST routes: <strong>217</strong></li>
+<li>Methods not exposed as REST routes: <strong>283</strong></li>
+<li>Candidate REST backlog: <strong>84</strong></li>
 </ul>
 <h2 id="rest-relevance">REST Relevance</h2>
 <table>
@@ -598,12 +598,12 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tbody>
 <tr>
 <td><code>exposed</code></td>
-<td style="text-align: right;">210</td>
+<td style="text-align: right;">217</td>
 <td>Already used by public REST routes.</td>
 </tr>
 <tr>
 <td><code>candidate</code></td>
-<td style="text-align: right;">93</td>
+<td style="text-align: right;">84</td>
 <td>Likely useful as a future user-facing REST endpoint.</td>
 </tr>
 <tr>
@@ -613,7 +613,7 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>internal</code></td>
-<td style="text-align: right;">100</td>
+<td style="text-align: right;">102</td>
 <td>Low-level auth/request/configuration/signup/challenge helpers that should not be mirrored blindly.</td>
 </tr>
 </tbody>
@@ -897,10 +897,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>user</code></td>
-<td style="text-align: right;">32</td>
-<td style="text-align: right;">16</td>
+<td style="text-align: right;">39</td>
+<td style="text-align: right;">7</td>
 <td style="text-align: right;">22</td>
-<td style="text-align: right;">4</td>
+<td style="text-align: right;">6</td>
 <td style="text-align: right;">74</td>
 </tr>
 <tr>
@@ -984,7 +984,7 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>user</code></td>
-<td><code>chaining</code>, <code>creator_info</code>, <code>discover_recommended_accounts_for_category_v1</code>, <code>feed_user_stream_item</code>, <code>fetch_suggestion_details</code>, <code>new_feed_exist</code>, <code>user_follow_requests_approve</code>, <code>user_follow_requests_decline</code>, <code>user_friendships_v1</code>, <code>user_related_profiles_gql</code>, <code>user_short_gql</code>, <code>user_stream_by_id_flat</code>, <code>user_stream_by_id_v1</code>, <code>user_stream_by_username_flat</code>, <code>user_stream_by_username_v1</code>, <code>user_web_profile_info_v1</code></td>
+<td><code>feed_user_stream_item</code>, <code>user_friendships_v1</code>, <code>user_stream_by_id_flat</code>, <code>user_stream_by_id_v1</code>, <code>user_stream_by_username_flat</code>, <code>user_stream_by_username_v1</code>, <code>user_web_profile_info_v1</code></td>
 </tr>
 <tr>
 <td><code>video</code></td>
@@ -1022,6 +1022,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>collections</code></td>
 </tr>
 <tr>
+<td><code>GET /account/feed/new</code></td>
+<td><code>new_feed_exist</code></td>
+</tr>
+<tr>
 <td><code>GET /account/feed/timeline</code></td>
 <td><code>get_timeline_feed</code></td>
 </tr>
@@ -1034,8 +1038,16 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>user_follow_request_approve</code></td>
 </tr>
 <tr>
+<td><code>DELETE /account/follow/requests</code></td>
+<td><code>user_follow_requests_decline</code></td>
+</tr>
+<tr>
 <td><code>GET /account/follow/requests</code></td>
 <td><code>user_follow_requests_chunk</code></td>
+</tr>
+<tr>
+<td><code>POST /account/follow/requests/approve</code></td>
+<td><code>user_follow_requests_approve</code></td>
 </tr>
 <tr>
 <td><code>GET /account/liked/media</code></td>
@@ -1686,6 +1698,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>close_friend_add</code></td>
 </tr>
 <tr>
+<td><code>GET /user/creator</code></td>
+<td><code>creator_info</code></td>
+</tr>
+<tr>
 <td><code>DELETE /user/follow</code></td>
 <td><code>user_unfollow</code></td>
 </tr>
@@ -1774,12 +1790,24 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>user_info_by_username_v1</code>, <code>user_medias_paginated_v1</code></td>
 </tr>
 <tr>
+<td><code>GET /user/recommendations</code></td>
+<td><code>discover_recommended_accounts_for_category_v1</code></td>
+</tr>
+<tr>
 <td><code>GET /user/reels</code></td>
 <td><code>user_clips_paginated_v1</code>, <code>user_info_by_username_v1</code></td>
 </tr>
 <tr>
 <td><code>GET /user/stories</code></td>
 <td><code>user_stories</code></td>
+</tr>
+<tr>
+<td><code>GET /user/suggestions</code></td>
+<td><code>chaining</code></td>
+</tr>
+<tr>
+<td><code>GET /user/suggestions/details</code></td>
+<td><code>fetch_suggestion_details</code></td>
 </tr>
 <tr>
 <td><code>GET /user/tagged/posts</code></td>
@@ -1990,9 +2018,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>chaining(self, user_id: str) -&gt; dict</code></td>
 <td><code>user</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /user/suggestions</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>challenge_api(self, data)</code></td>
@@ -2312,9 +2340,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>creator_info(self, user_id: str, entry_point: str = 'direct_thread') -&gt; Tuple[aiograpi.types.UserShort, Dict]</code></td>
 <td><code>user</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /user/creator</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>delete_note(self, note_id: int) -&gt; bool</code></td>
@@ -2669,9 +2697,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>discover_recommended_accounts_for_category_v1(self, user_id: str) -&gt; dict</code></td>
 <td><code>user</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /user/recommendations</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>dump_instaman(self)</code></td>
@@ -2844,9 +2872,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>fetch_suggestion_details(self, user_id: str, chained_ids: Union[str, List[Union[str, int]]]) -&gt; dict</code></td>
 <td><code>user</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /user/suggestions/details</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>friends_reels(self, amount: int = 10, last_media_pk: int = 0) -&gt; List[aiograpi.types.Media]</code></td>
@@ -3782,9 +3810,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>new_feed_exist(self) -&gt; bool</code></td>
 <td><code>user</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /account/feed/new</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>news_inbox_v1(self, mark_as_seen: bool = False) -&gt; dict</code></td>
@@ -4748,9 +4776,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>user_follow_requests_approve(self, user_ids: List[str]) -&gt; Dict[str, bool]</code></td>
 <td><code>user</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>POST /account/follow/requests/approve</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>user_follow_requests_chunk(self, max_amount: int = 0, max_id: str = '') -&gt; Tuple[List[aiograpi.types.UserShort], str]</code></td>
@@ -4762,9 +4790,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>user_follow_requests_decline(self, user_ids: List[str]) -&gt; Dict[str, bool]</code></td>
 <td><code>user</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>DELETE /account/follow/requests</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>user_followers(self, user_id: str, amount: int = 0) -&gt; Dict[str, aiograpi.types.UserShort]</code></td>
@@ -5015,8 +5043,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>user_related_profiles_gql(self, user_id: str) -&gt; List[aiograpi.types.UserShort]</code></td>
 <td><code>user</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>internal</code></td>
+<td>low-level aiograpi helper or unsafe generic surface</td>
 </tr>
 <tr>
 <td><code>user_remove_follower(self, user_id: str) -&gt; bool</code></td>
@@ -5029,8 +5057,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>user_short_gql(self, user_id: str) -&gt; aiograpi.types.UserShort</code></td>
 <td><code>user</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>internal</code></td>
+<td>low-level aiograpi helper or unsafe generic surface</td>
 </tr>
 <tr>
 <td><code>user_stories(self, user_id: str, amount: int = None) -&gt; List[aiograpi.types.Story]</code></td>

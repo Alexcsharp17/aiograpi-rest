@@ -419,6 +419,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#user-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User Discovery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reels" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -678,6 +689,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#user-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User Discovery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reels" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -848,6 +870,8 @@ check account and proxy health before retrying.</p>
 <li><code>DELETE /user/follower</code> removes a follower.</li>
 <li><code>POST /account/follow/request/approve</code> approves a pending follow request.</li>
 <li><code>DELETE /account/follow/request</code> declines a pending follow request.</li>
+<li><code>POST /account/follow/requests/approve</code> approves multiple pending follow requests.</li>
+<li><code>DELETE /account/follow/requests</code> declines multiple pending follow requests.</li>
 <li><code>POST /user/close-friend</code> adds a user to close friends.</li>
 <li><code>DELETE /user/close-friend</code> removes a user from close friends.</li>
 <li><code>POST /user/notifications/posts</code> enables post notifications for a user.</li>
@@ -897,6 +921,20 @@ be passed directly into OpenAPI client generators.</p>
 <code>/search/accounts</code>, <code>/search/typeahead</code>, <code>/search/typeahead/stream</code>, and
 <code>/search/item</code> return raw Instagram-shaped objects because their payloads vary
 by ranking surface and cursor state.</p>
+<h2 id="user-discovery">User Discovery</h2>
+<p>User discovery routes live under the target user context and return raw
+Instagram-shaped objects where <code>aiograpi</code> exposes variable discovery payloads:</p>
+<ul>
+<li><code>GET /user/suggestions</code> returns suggested users for a target profile.</li>
+<li><code>GET /user/suggestions/details</code> returns expanded social context for
+  suggestion IDs from <code>/user/suggestions</code>.</li>
+<li><code>GET /user/recommendations</code> returns category-based recommended accounts for a
+  target profile.</li>
+<li><code>GET /user/creator</code> returns creator metadata for a target profile as
+  <code>{ "user": ..., "info": ... }</code>.</li>
+</ul>
+<p><code>GET /account/feed/new</code> belongs to the authenticated account context and returns
+whether Instagram says new timeline feed items are available.</p>
 <h2 id="reels">Reels</h2>
 <p>Global Reels feed routes live under the <code>Reels</code> tag and return arrays of media
 objects. They accept <code>amount</code> and <code>last_media_pk</code> where the underlying
