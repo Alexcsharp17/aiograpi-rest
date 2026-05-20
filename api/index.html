@@ -881,13 +881,22 @@ be passed directly into OpenAPI client generators.</p>
 <li><code>GET /search/places</code> searches places by query with optional <code>lat</code> and <code>lng</code>
   ranking context.</li>
 <li><code>GET /search/top</code> returns Instagram's blended top search results.</li>
+<li><code>GET /search/top/flat</code> returns the older flat blended top-search list.</li>
+<li><code>GET /search/web/top</code> returns web top-search results.</li>
+<li><code>GET /search/web/hashtags</code> returns web hashtag search results.</li>
 <li><code>GET /search/reels</code> returns Reel search results.</li>
+<li><code>GET /search/item</code> returns one raw Instagram search tab by <code>item_id</code> and
+  <code>search_surface</code>.</li>
+<li><code>GET /search/suggested/users</code> returns suggested users for a profile.</li>
 <li><code>GET /search/recent</code> returns the authenticated account's recent searches.</li>
 <li><code>GET /search/typeahead</code> returns autocomplete suggestions for a partial query.</li>
+<li><code>GET /search/typeahead/stream</code> returns the raw typeahead stream envelope.</li>
+<li><code>GET /search/typeahead/users</code> returns flattened typeahead user suggestions.</li>
 </ul>
-<p><code>/search/top</code>, <code>/search/reels</code>, <code>/search/accounts</code>, and <code>/search/typeahead</code>
-return raw Instagram-shaped objects because their payloads vary by ranking
-surface and cursor state.</p>
+<p><code>/search/top</code>, <code>/search/top/flat</code>, <code>/search/web/top</code>, <code>/search/reels</code>,
+<code>/search/accounts</code>, <code>/search/typeahead</code>, <code>/search/typeahead/stream</code>, and
+<code>/search/item</code> return raw Instagram-shaped objects because their payloads vary
+by ranking surface and cursor state.</p>
 <h2 id="reels">Reels</h2>
 <p>Global Reels feed routes live under the <code>Reels</code> tag and return arrays of media
 objects. They accept <code>amount</code> and <code>last_media_pk</code> where the underlying
