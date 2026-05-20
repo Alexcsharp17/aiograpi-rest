@@ -408,6 +408,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#notification-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notification Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#openapi" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -700,6 +711,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#notification-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notification Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#openapi" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -943,6 +965,18 @@ check account and proxy health before retrying.</p>
 <li><code>POST /account/password/reset</code> sends a password reset flow for a username.</li>
 <li><code>POST /account/email/confirm</code> sends an email confirmation code.</li>
 <li><code>POST /account/phone/confirm</code> sends a phone confirmation code.</li>
+</ul>
+<h2 id="notification-settings">Notification Settings</h2>
+<ul>
+<li><code>GET /notifications/settings</code> returns supported notification <code>content_type</code>
+  values and allowed setting values.</li>
+<li><code>PATCH /notifications/settings</code> updates one notification setting by
+  <code>content_type</code> and <code>setting_value</code>. Most notification settings accept <code>off</code>,
+  <code>following_only</code>, or <code>everyone</code>.</li>
+<li><code>PATCH /notifications/settings</code> with <code>content_type=mute_all</code> accepts only
+  <code>cancel</code>, <code>15_minutes</code>, <code>1_hour</code>, <code>2_hour</code>, <code>4_hour</code>, or <code>8_hour</code>.</li>
+<li><code>DELETE /notifications/settings</code> disables all supported notification
+  settings for the authenticated account.</li>
 </ul>
 <h2 id="openapi">OpenAPI</h2>
 <ul>

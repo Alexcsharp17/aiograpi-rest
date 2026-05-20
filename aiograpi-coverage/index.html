@@ -582,9 +582,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <h2 id="summary">Summary</h2>
 <ul>
 <li>Public <code>aiograpi.Client</code> methods: <strong>500</strong></li>
-<li>Methods reached by REST routes: <strong>229</strong></li>
-<li>Methods not exposed as REST routes: <strong>271</strong></li>
-<li>Candidate REST backlog: <strong>70</strong></li>
+<li>Methods reached by REST routes: <strong>231</strong></li>
+<li>Methods not exposed as REST routes: <strong>269</strong></li>
+<li>Candidate REST backlog: <strong>44</strong></li>
 </ul>
 <h2 id="rest-relevance">REST Relevance</h2>
 <table>
@@ -598,17 +598,17 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tbody>
 <tr>
 <td><code>exposed</code></td>
-<td style="text-align: right;">229</td>
+<td style="text-align: right;">231</td>
 <td>Already used by public REST routes.</td>
 </tr>
 <tr>
 <td><code>candidate</code></td>
-<td style="text-align: right;">70</td>
+<td style="text-align: right;">44</td>
 <td>Likely useful as a future user-facing REST endpoint.</td>
 </tr>
 <tr>
 <td><code>duplicate</code></td>
-<td style="text-align: right;">99</td>
+<td style="text-align: right;">123</td>
 <td>Variant of an already exposed method, such as <code>_v1</code>, <code>_gql</code>, <code>_a1</code>, chunk, or origin helpers.</td>
 </tr>
 <tr>
@@ -809,9 +809,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>notification</code></td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">26</td>
+<td style="text-align: right;">3</td>
 <td style="text-align: right;">0</td>
+<td style="text-align: right;">24</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">27</td>
 </tr>
@@ -953,10 +953,6 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>note</code></td>
 <td><code>create_music_note</code>, <code>get_note_by_user</code>, <code>get_note_text_by_user</code>, <code>last_seen_update_note</code>, <code>notes_music_browser</code></td>
-</tr>
-<tr>
-<td><code>notification</code></td>
-<td><code>notification_announcements</code>, <code>notification_comment_likes</code>, <code>notification_comments</code>, <code>notification_connection</code>, <code>notification_direct_group_requests</code>, <code>notification_direct_share_activity</code>, <code>notification_disable</code>, <code>notification_felix_upload_result</code>, <code>notification_first_post</code>, <code>notification_follow_request_accepted</code>, <code>notification_fundraiser_creator</code>, <code>notification_fundraiser_supporter</code>, <code>notification_like_and_comment_on_photo_user_tagged</code>, <code>notification_likes</code>, <code>notification_live_broadcast</code>, <code>notification_login</code>, <code>notification_mute_all</code>, <code>notification_new_follower</code>, <code>notification_pending_direct_share</code>, <code>notification_reminders</code>, <code>notification_report_updated</code>, <code>notification_rooms</code>, <code>notification_tagged_in_bio</code>, <code>notification_user_tagged</code>, <code>notification_video_call</code>, <code>notification_view_count</code></td>
 </tr>
 <tr>
 <td><code>photo</code></td>
@@ -1546,12 +1542,16 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>news_inbox_v1</code></td>
 </tr>
 <tr>
+<td><code>DELETE /notifications/settings</code></td>
+<td><code>notification_disable</code></td>
+</tr>
+<tr>
 <td><code>GET /notifications/settings</code></td>
 <td>-</td>
 </tr>
 <tr>
 <td><code>PATCH /notifications/settings</code></td>
-<td><code>notification_settings</code></td>
+<td><code>notification_mute_all</code>, <code>notification_settings</code></td>
 </tr>
 <tr>
 <td><code>GET /photo/download</code></td>
@@ -3876,155 +3876,155 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>notification_announcements(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=announcements</code></td>
 </tr>
 <tr>
 <td><code>notification_comment_likes(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=comment_likes</code></td>
 </tr>
 <tr>
 <td><code>notification_comments(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=comments</code></td>
 </tr>
 <tr>
 <td><code>notification_connection(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=connection_notification</code></td>
 </tr>
 <tr>
 <td><code>notification_direct_group_requests(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=direct_group_requests</code></td>
 </tr>
 <tr>
 <td><code>notification_direct_share_activity(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=direct_share_activity</code></td>
 </tr>
 <tr>
 <td><code>notification_disable(self) -&gt; bool</code></td>
 <td><code>notification</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>DELETE /notifications/settings</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>notification_felix_upload_result(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=felix_upload_result</code></td>
 </tr>
 <tr>
 <td><code>notification_first_post(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=first_post</code></td>
 </tr>
 <tr>
 <td><code>notification_follow_request_accepted(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=follow_request_accepted</code></td>
 </tr>
 <tr>
 <td><code>notification_fundraiser_creator(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=fundraiser_creator</code></td>
 </tr>
 <tr>
 <td><code>notification_fundraiser_supporter(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=fundraiser_supporter</code></td>
 </tr>
 <tr>
 <td><code>notification_like_and_comment_on_photo_user_tagged(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=like_and_comment_on_photo_user_tagged</code></td>
 </tr>
 <tr>
 <td><code>notification_likes(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=likes</code></td>
 </tr>
 <tr>
 <td><code>notification_live_broadcast(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=live_broadcast</code></td>
 </tr>
 <tr>
 <td><code>notification_login(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=login_notification</code></td>
 </tr>
 <tr>
 <td><code>notification_mute_all(self, setting_value: Literal['cancel', '15_minutes', '1_hour', '2_hour', '4_hour', '8_hour'] = '8_hour') -&gt; bool</code></td>
 <td><code>notification</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>PATCH /notifications/settings</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>notification_new_follower(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=new_follower</code></td>
 </tr>
 <tr>
 <td><code>notification_pending_direct_share(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=pending_direct_share</code></td>
 </tr>
 <tr>
 <td><code>notification_reminders(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=notification_reminders</code></td>
 </tr>
 <tr>
 <td><code>notification_report_updated(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=report_updated</code></td>
 </tr>
 <tr>
 <td><code>notification_rooms(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=rooms</code></td>
 </tr>
 <tr>
 <td><code>notification_settings(self, content_type: str, setting_value: str) -&gt; bool</code></td>
@@ -4037,29 +4037,29 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>notification_tagged_in_bio(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=tagged_in_bio</code></td>
 </tr>
 <tr>
 <td><code>notification_user_tagged(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=user_tagged</code></td>
 </tr>
 <tr>
 <td><code>notification_video_call(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=video_call</code></td>
 </tr>
 <tr>
 <td><code>notification_view_count(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>
 <td><code>notification</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>covered by generic <code>PATCH /notifications/settings</code> with <code>content_type=view_count</code></td>
 </tr>
 <tr>
 <td><code>one_tap_app_login(self, user_id: str, nonce: str) -&gt; bool</code></td>
