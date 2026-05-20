@@ -582,9 +582,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <h2 id="summary">Summary</h2>
 <ul>
 <li>Public <code>aiograpi.Client</code> methods: <strong>500</strong></li>
-<li>Methods reached by REST routes: <strong>244</strong></li>
-<li>Methods not exposed as REST routes: <strong>256</strong></li>
-<li>Candidate REST backlog: <strong>31</strong></li>
+<li>Methods reached by REST routes: <strong>257</strong></li>
+<li>Methods not exposed as REST routes: <strong>243</strong></li>
+<li>Candidate REST backlog: <strong>18</strong></li>
 </ul>
 <h2 id="rest-relevance">REST Relevance</h2>
 <table>
@@ -598,12 +598,12 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tbody>
 <tr>
 <td><code>exposed</code></td>
-<td style="text-align: right;">244</td>
+<td style="text-align: right;">257</td>
 <td>Already used by public REST routes.</td>
 </tr>
 <tr>
 <td><code>candidate</code></td>
-<td style="text-align: right;">31</td>
+<td style="text-align: right;">18</td>
 <td>Likely useful as a future user-facing REST endpoint.</td>
 </tr>
 <tr>
@@ -785,8 +785,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>media</code></td>
-<td style="text-align: right;">21</td>
-<td style="text-align: right;">8</td>
+<td style="text-align: right;">29</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">29</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">59</td>
@@ -801,8 +801,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>note</code></td>
-<td style="text-align: right;">3</td>
-<td style="text-align: right;">5</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">8</td>
@@ -939,16 +939,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>standalone_fundraiser_info_v1</code></td>
 </tr>
 <tr>
-<td><code>media</code></td>
-<td><code>archive_medias</code>, <code>media_create_livestream</code>, <code>media_end_livestream</code>, <code>media_get_livestream_comments</code>, <code>media_get_livestream_info</code>, <code>media_get_livestream_viewers</code>, <code>media_start_livestream</code>, <code>media_template_v1</code></td>
-</tr>
-<tr>
 <td><code>multiple_accounts</code></td>
 <td><code>featured_accounts_v1</code>, <code>get_account_family_v1</code></td>
-</tr>
-<tr>
-<td><code>note</code></td>
-<td><code>create_music_note</code>, <code>get_note_by_user</code>, <code>get_note_text_by_user</code>, <code>last_seen_update_note</code>, <code>notes_music_browser</code></td>
 </tr>
 <tr>
 <td><code>photo</code></td>
@@ -984,6 +976,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>PATCH /account</code></td>
 <td><code>account_edit</code></td>
+</tr>
+<tr>
+<td><code>GET /account/archive/media</code></td>
+<td><code>archive_medias_paginated_v1</code></td>
 </tr>
 <tr>
 <td><code>DELETE /account/bio-links</code></td>
@@ -1128,6 +1124,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>GET /clip/download/by/url</code></td>
 <td><code>clip_download_by_url</code></td>
+</tr>
+<tr>
+<td><code>GET /clip/template</code></td>
+<td><code>media_template_v1</code></td>
 </tr>
 <tr>
 <td><code>POST /clip/upload</code></td>
@@ -1490,6 +1490,26 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>media_likers</code></td>
 </tr>
 <tr>
+<td><code>GET /media/livestream</code></td>
+<td><code>media_get_livestream_info</code></td>
+</tr>
+<tr>
+<td><code>PATCH /media/livestream</code></td>
+<td><code>media_end_livestream</code>, <code>media_start_livestream</code></td>
+</tr>
+<tr>
+<td><code>POST /media/livestream</code></td>
+<td><code>media_create_livestream</code></td>
+</tr>
+<tr>
+<td><code>GET /media/livestream/comments</code></td>
+<td><code>media_get_livestream_comments</code></td>
+</tr>
+<tr>
+<td><code>GET /media/livestream/viewers</code></td>
+<td><code>media_get_livestream_viewers</code></td>
+</tr>
+<tr>
 <td><code>GET /media/oembed</code></td>
 <td><code>media_oembed</code></td>
 </tr>
@@ -1522,12 +1542,32 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>delete_note</code></td>
 </tr>
 <tr>
+<td><code>GET /note</code></td>
+<td><code>get_note_by_user</code>, <code>get_notes</code></td>
+</tr>
+<tr>
 <td><code>POST /note</code></td>
 <td><code>create_note</code></td>
 </tr>
 <tr>
+<td><code>POST /note/music</code></td>
+<td><code>create_music_note</code></td>
+</tr>
+<tr>
+<td><code>GET /note/text</code></td>
+<td><code>get_note_text_by_user</code>, <code>get_notes</code></td>
+</tr>
+<tr>
 <td><code>GET /notes</code></td>
 <td><code>get_notes</code></td>
+</tr>
+<tr>
+<td><code>PATCH /notes/last-seen</code></td>
+<td><code>last_seen_update_note</code></td>
+</tr>
+<tr>
+<td><code>GET /notes/music/browser</code></td>
+<td><code>notes_music_browser</code></td>
 </tr>
 <tr>
 <td><code>GET /notifications</code></td>
@@ -2001,22 +2041,22 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>archive_medias(self, amount: int = 0) -&gt; List[aiograpi.types.Media]</code></td>
 <td><code>media</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>duplicate</code></td>
+<td>variant of already exposed <code>archive_medias</code> route family</td>
 </tr>
 <tr>
 <td><code>archive_medias_paginated_v1(self, amount: int = 0, end_cursor: str = '') -&gt; Tuple[List[aiograpi.types.Media], str]</code></td>
 <td><code>media</code></td>
-<td>-</td>
-<td><code>duplicate</code></td>
-<td>variant of candidate <code>archive_medias</code></td>
+<td><code>GET /account/archive/media</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>archive_medias_v1(self, amount: int = 0) -&gt; List[aiograpi.types.Media]</code></td>
 <td><code>media</code></td>
 <td>-</td>
 <td><code>duplicate</code></td>
-<td>variant of candidate <code>archive_medias</code></td>
+<td>variant of already exposed <code>archive_medias</code> route family</td>
 </tr>
 <tr>
 <td><code>archive_stories(self, amount: int = 0) -&gt; List[aiograpi.types.Story]</code></td>
@@ -2378,9 +2418,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>create_music_note(self, track: Union[aiograpi.types.Track, Dict], text: str = '', audience: int = 0, start_time: Optional[int] = None, duration: int = 30000, browse_session_id: Optional[str] = None, alacorn_session_id: Optional[str] = None) -&gt; aiograpi.types.Note</code></td>
 <td><code>note</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>POST /note/music</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>create_note(self, text: str, audience: int = 0) -&gt; aiograpi.types.Note</code></td>
@@ -2973,21 +3013,21 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>get_note_by_user(self, notes: List[aiograpi.types.Note], username: str) -&gt; Optional[aiograpi.types.Note]</code></td>
 <td><code>note</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /note</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>get_note_text_by_user(self, notes: List[aiograpi.types.Note], username: str) -&gt; Optional[str]</code></td>
 <td><code>note</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /note/text</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>get_notes(self) -&gt; List[aiograpi.types.Note]</code></td>
 <td><code>note</code></td>
-<td><code>GET /notes</code></td>
+<td><code>GET /note</code><br><code>GET /note/text</code><br><code>GET /notes</code></td>
 <td><code>exposed</code></td>
 <td>used by at least one public REST route</td>
 </tr>
@@ -3302,9 +3342,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>last_seen_update_note(self) -&gt; bool</code></td>
 <td><code>note</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>PATCH /notes/last-seen</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>liked_medias(self, amount: int = 21, last_media_pk: int = 0) -&gt; List[aiograpi.types.Media]</code></td>
@@ -3617,9 +3657,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>media_create_livestream(self, title='Instagram Live')</code></td>
 <td><code>media</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>POST /media/livestream</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>media_delete(self, media_id: str) -&gt; bool</code></td>
@@ -3638,30 +3678,30 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>media_end_livestream(self, broadcast_id)</code></td>
 <td><code>media</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>PATCH /media/livestream</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>media_get_livestream_comments(self, broadcast_id)</code></td>
 <td><code>media</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /media/livestream/comments</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>media_get_livestream_info(self, broadcast_id)</code></td>
 <td><code>media</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /media/livestream</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>media_get_livestream_viewers(self, broadcast_id)</code></td>
 <td><code>media</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /media/livestream/viewers</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>media_id(self, media_pk: str) -&gt; str</code></td>
@@ -3785,9 +3825,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>media_start_livestream(self, broadcast_id)</code></td>
 <td><code>media</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>PATCH /media/livestream</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>media_stream_comments_v1_chunk(self, media_id: str, min_id: str = '', max_id: str = '') -&gt; Tuple[List[aiograpi.types.Comment], str, str]</code></td>
@@ -3799,9 +3839,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>media_template_v1(self, media_id: str)</code></td>
 <td><code>media</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /clip/template</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>media_unarchive(self, media_id: str) -&gt; bool</code></td>
@@ -3876,9 +3916,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>notes_music_browser(self) -&gt; Dict</code></td>
 <td><code>note</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /notes/music/browser</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>notification_announcements(self, setting_value: Literal['off', 'following_only', 'everyone'] = 'off') -&gt; bool</code></td>

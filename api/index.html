@@ -518,6 +518,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#livestreams-and-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Livestreams And Templates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#comment-utilities" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -843,6 +865,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#livestreams-and-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Livestreams And Templates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#comment-utilities" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1121,6 +1165,8 @@ they read the current account's saved Instagram collections.</p>
 <li><code>GET /account/collection</code> gets one saved collection by <code>collection_pk</code> or <code>name</code>.</li>
 <li><code>GET /account/collection/media</code> lists media in one saved collection by
   <code>collection_pk</code> or <code>name</code>.</li>
+<li><code>GET /account/archive/media</code> lists archived media for the authenticated
+  account with <code>items</code> and <code>next_cursor</code>.</li>
 </ul>
 <h2 id="explore">Explore</h2>
 <p>Explore routes return raw Instagram-shaped objects because the Explore payload
@@ -1137,6 +1183,33 @@ workflows.</p>
 <li><code>GET /track/stream</code> returns streamed media for a track <code>id</code>.</li>
 <li><code>GET /track/download/by/url</code> downloads track audio from a URL.</li>
 <li><code>GET /music/feed/browser</code> returns music candidates for feed posts.</li>
+</ul>
+<h2 id="livestreams-and-templates">Livestreams And Templates</h2>
+<p>Livestream routes manage the authenticated account's Instagram Live broadcast
+state. They are exposed as resource state changes instead of <code>start</code>/<code>end</code>
+action paths:</p>
+<ul>
+<li><code>POST /media/livestream</code> creates a live broadcast and returns stream server
+  metadata.</li>
+<li><code>GET /media/livestream</code> returns broadcast info by <code>broadcast_id</code>.</li>
+<li><code>PATCH /media/livestream</code> changes the broadcast <code>state</code> to <code>started</code> or
+  <code>ended</code>.</li>
+<li><code>GET /media/livestream/comments</code> lists live comments for a <code>broadcast_id</code>.</li>
+<li><code>GET /media/livestream/viewers</code> lists live viewers for a <code>broadcast_id</code>.</li>
+<li><code>GET /clip/template</code> returns the raw clip template payload for a source
+  <code>media_id</code>.</li>
+</ul>
+<h2 id="notes">Notes</h2>
+<ul>
+<li><code>GET /notes</code> lists visible notes.</li>
+<li><code>GET /note</code> returns a visible note by <code>username</code>.</li>
+<li><code>GET /note/text</code> returns only the visible note text by <code>username</code>.</li>
+<li><code>POST /note</code> creates a text note.</li>
+<li><code>POST /note/music</code> creates a note with music from a track payload returned by
+  <code>GET /notes/music/browser</code>.</li>
+<li><code>PATCH /notes/last-seen</code> marks notes as seen.</li>
+<li><code>DELETE /note</code> deletes one note by <code>note_id</code>.</li>
+<li><code>GET /notes/music/browser</code> returns music candidates for Notes.</li>
 </ul>
 <h2 id="comment-utilities">Comment Utilities</h2>
 <p>Comment routes live under <code>Media (Post)</code> because Instagram comments always
@@ -1176,6 +1249,7 @@ from the previous page. This shape is used for:</p>
 <li><code>GET /direct/inbox</code></li>
 <li><code>GET /direct/pending</code></li>
 <li><code>GET /direct/spam</code></li>
+<li><code>GET /account/archive/media</code></li>
 <li><code>GET /hashtag/media/recent</code></li>
 <li><code>GET /hashtag/media/top</code></li>
 <li><code>GET /location/media/recent</code></li>
