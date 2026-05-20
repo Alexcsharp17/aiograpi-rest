@@ -582,9 +582,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <h2 id="summary">Summary</h2>
 <ul>
 <li>Public <code>aiograpi.Client</code> methods: <strong>500</strong></li>
-<li>Methods reached by REST routes: <strong>265</strong></li>
-<li>Methods not exposed as REST routes: <strong>235</strong></li>
-<li>Candidate REST backlog: <strong>10</strong></li>
+<li>Methods reached by REST routes: <strong>266</strong></li>
+<li>Methods not exposed as REST routes: <strong>234</strong></li>
+<li>Candidate REST backlog: <strong>9</strong></li>
 </ul>
 <h2 id="rest-relevance">REST Relevance</h2>
 <table>
@@ -598,12 +598,12 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tbody>
 <tr>
 <td><code>exposed</code></td>
-<td style="text-align: right;">265</td>
+<td style="text-align: right;">266</td>
 <td>Already used by public REST routes.</td>
 </tr>
 <tr>
 <td><code>candidate</code></td>
-<td style="text-align: right;">10</td>
+<td style="text-align: right;">9</td>
 <td>Likely useful as a future user-facing REST endpoint.</td>
 </tr>
 <tr>
@@ -905,8 +905,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>video</code></td>
-<td style="text-align: right;">4</td>
-<td style="text-align: right;">1</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">4</td>
 <td style="text-align: right;">10</td>
@@ -941,10 +941,6 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>totp</code></td>
 <td><code>totp_generate_code</code>, <code>totp_generate_seed</code></td>
-</tr>
-<tr>
-<td><code>video</code></td>
-<td><code>video_upload_to_direct</code></td>
 </tr>
 </tbody>
 </table>
@@ -1312,6 +1308,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>POST /direct/video</code></td>
 <td><code>direct_send_video</code></td>
+</tr>
+<tr>
+<td><code>POST /direct/video/upload</code></td>
+<td><code>video_upload_to_direct</code></td>
 </tr>
 <tr>
 <td><code>POST /direct/voice</code></td>
@@ -5406,9 +5406,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>video_upload_to_direct(self, path: pathlib._local.Path, caption: str = '', thumbnail: pathlib._local.Path = None, mentions: List[aiograpi.types.StoryMention] = [], medias: List[aiograpi.types.StoryMedia] = [], thread_ids: List[int] = [], extra_data: Dict[str, str] = {}) -&gt; aiograpi.types.DirectMessage</code></td>
 <td><code>video</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>POST /direct/video/upload</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>video_upload_to_story(self, path: pathlib._local.Path, caption: str = '', thumbnail: pathlib._local.Path = None, mentions: List[aiograpi.types.StoryMention] = [], locations: List[aiograpi.types.StoryLocation] = [], links: List[aiograpi.types.StoryLink] = [], hashtags: List[aiograpi.types.StoryHashtag] = [], stickers: List[aiograpi.types.StorySticker] = [], medias: List[aiograpi.types.StoryMedia] = [], polls: List[aiograpi.types.StoryPoll] = [], extra_data: Dict[str, str] = {}) -&gt; aiograpi.types.Story</code></td>

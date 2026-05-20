@@ -1254,6 +1254,9 @@ belong to a media object.</p>
 <li><code>DELETE /direct/message</code> unsends a direct message.</li>
 <li><code>POST /direct/cutout/sticker</code> sends a cutout sticker to either <code>user_ids</code>
   or <code>thread_ids</code>.</li>
+<li><code>POST /direct/video/upload</code> uploads a video through aiograpi's story-direct
+  flow with <code>caption</code>, optional <code>thumbnail</code>, repeatable JSON <code>mentions</code> and
+  <code>medias</code>, required <code>thread_ids</code>, and optional JSON <code>extra_data</code>.</li>
 </ul>
 <h2 id="pagination">Pagination</h2>
 <p>Paginated read-list routes return an object with <code>items</code> and <code>next_cursor</code>.
