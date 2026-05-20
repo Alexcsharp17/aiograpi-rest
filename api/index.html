@@ -1305,10 +1305,16 @@ endpoints for photo, video, clip/Reels, IGTV, album/carousel, and the media
 edit endpoint accept <code>usertags</code> as one JSON array or repeated JSON-encoded
 <code>Usertag</code> values, and <code>location</code> as one JSON-encoded <code>Location</code> object. Leave
 these fields empty or omit them when no metadata is needed.</p>
-<p>Reel music upload and creation helpers also use JSON strings: <code>track</code> is a
-JSON-encoded <code>Track</code> object returned by music search/browser routes,
-<code>extra_data</code> is optional Reel configure data, and <code>device_status</code> is an
-optional JSON object for <code>GET /clip/share/facebook/config</code>.</p>
+<p>Music upload endpoints also use JSON strings: <code>track</code> is a JSON-encoded
+<code>Track</code> object returned by music search/browser routes, and <code>extra_data</code> is
+optional configure data. This applies to:</p>
+<ul>
+<li><code>POST /photo/upload/with/music</code></li>
+<li><code>POST /clip/upload/with/music</code></li>
+<li><code>POST /album/upload/with/music</code></li>
+</ul>
+<p><code>device_status</code> is an optional JSON object for
+<code>GET /clip/share/facebook/config</code>.</p>
 <h2 id="system-endpoints">System Endpoints</h2>
 <ul>
 <li><code>GET /health</code> returns <code>{"status":"ok"}</code> for liveness.</li>

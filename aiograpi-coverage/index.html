@@ -582,9 +582,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <h2 id="summary">Summary</h2>
 <ul>
 <li>Public <code>aiograpi.Client</code> methods: <strong>500</strong></li>
-<li>Methods reached by REST routes: <strong>263</strong></li>
-<li>Methods not exposed as REST routes: <strong>237</strong></li>
-<li>Candidate REST backlog: <strong>12</strong></li>
+<li>Methods reached by REST routes: <strong>265</strong></li>
+<li>Methods not exposed as REST routes: <strong>235</strong></li>
+<li>Candidate REST backlog: <strong>10</strong></li>
 </ul>
 <h2 id="rest-relevance">REST Relevance</h2>
 <table>
@@ -598,12 +598,12 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tbody>
 <tr>
 <td><code>exposed</code></td>
-<td style="text-align: right;">263</td>
+<td style="text-align: right;">265</td>
 <td>Already used by public REST routes.</td>
 </tr>
 <tr>
 <td><code>candidate</code></td>
-<td style="text-align: right;">12</td>
+<td style="text-align: right;">10</td>
 <td>Likely useful as a future user-facing REST endpoint.</td>
 </tr>
 <tr>
@@ -649,8 +649,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>album</code></td>
-<td style="text-align: right;">3</td>
-<td style="text-align: right;">1</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">6</td>
@@ -825,8 +825,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>photo</code></td>
-<td style="text-align: right;">4</td>
-<td style="text-align: right;">1</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">4</td>
 <td style="text-align: right;">10</td>
@@ -923,10 +923,6 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </thead>
 <tbody>
 <tr>
-<td><code>album</code></td>
-<td><code>album_upload_with_music</code></td>
-</tr>
-<tr>
 <td><code>explore</code></td>
 <td><code>report_explore_media</code></td>
 </tr>
@@ -937,10 +933,6 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>multiple_accounts</code></td>
 <td><code>featured_accounts_v1</code>, <code>get_account_family_v1</code></td>
-</tr>
-<tr>
-<td><code>photo</code></td>
-<td><code>photo_upload_with_music</code></td>
 </tr>
 <tr>
 <td><code>story</code></td>
@@ -1080,6 +1072,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>POST /album/upload</code></td>
 <td><code>album_upload</code></td>
+</tr>
+<tr>
+<td><code>POST /album/upload/with/music</code></td>
+<td><code>album_upload_with_music</code></td>
 </tr>
 <tr>
 <td><code>POST /auth/challenge/resolve</code></td>
@@ -1622,6 +1618,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>photo_upload</code></td>
 </tr>
 <tr>
+<td><code>POST /photo/upload/with/music</code></td>
+<td><code>photo_upload_with_music</code></td>
+</tr>
+<tr>
 <td><code>GET /reels</code></td>
 <td><code>reels</code></td>
 </tr>
@@ -2053,9 +2053,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>album_upload_with_music(self, paths: List[pathlib._local.Path], caption: str, track: Union[aiograpi.types.Track, Dict], usertags: List[aiograpi.types.Usertag] = [], location: aiograpi.types.Location = None, configure_timeout: int = 3, configure_handler=None, configure_exception=None, to_story=False, extra_data: Dict[str, str] = {}, audio_asset_start_time: Optional[int] = None, overlap_duration: int = 30000, browse_session_id: Optional[str] = None, alacorn_session_id: Optional[str] = None) -&gt; aiograpi.types.Media</code></td>
 <td><code>album</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>POST /album/upload/with/music</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>archive_medias(self, amount: int = 0) -&gt; List[aiograpi.types.Media]</code></td>
@@ -4223,9 +4223,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>photo_upload_with_music(self, path: pathlib._local.Path, caption: str, track: Union[aiograpi.types.Track, Dict], upload_id: str = '', usertags: List[aiograpi.types.Usertag] = [], location: aiograpi.types.Location = None, extra_data: Dict[str, str] = {}, audio_asset_start_time: Optional[int] = None, overlap_duration: int = 30000, browse_session_id: Optional[str] = None, alacorn_session_id: Optional[str] = None) -&gt; aiograpi.types.Media</code></td>
 <td><code>photo</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>POST /photo/upload/with/music</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>pre_login_flow(self) -&gt; bool</code></td>
