@@ -582,9 +582,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <h2 id="summary">Summary</h2>
 <ul>
 <li>Public <code>aiograpi.Client</code> methods: <strong>500</strong></li>
-<li>Methods reached by REST routes: <strong>234</strong></li>
-<li>Methods not exposed as REST routes: <strong>266</strong></li>
-<li>Candidate REST backlog: <strong>41</strong></li>
+<li>Methods reached by REST routes: <strong>237</strong></li>
+<li>Methods not exposed as REST routes: <strong>263</strong></li>
+<li>Candidate REST backlog: <strong>38</strong></li>
 </ul>
 <h2 id="rest-relevance">REST Relevance</h2>
 <table>
@@ -598,12 +598,12 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tbody>
 <tr>
 <td><code>exposed</code></td>
-<td style="text-align: right;">234</td>
+<td style="text-align: right;">237</td>
 <td>Already used by public REST routes.</td>
 </tr>
 <tr>
 <td><code>candidate</code></td>
-<td style="text-align: right;">41</td>
+<td style="text-align: right;">38</td>
 <td>Likely useful as a future user-facing REST endpoint.</td>
 </tr>
 <tr>
@@ -753,8 +753,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>highlight</code></td>
-<td style="text-align: right;">7</td>
-<td style="text-align: right;">3</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">12</td>
@@ -937,10 +937,6 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>fundraiser</code></td>
 <td><code>standalone_fundraiser_info_v1</code></td>
-</tr>
-<tr>
-<td><code>highlight</code></td>
-<td><code>highlight_change_cover</code>, <code>highlight_change_title</code>, <code>highlight_pk_from_url</code></td>
 </tr>
 <tr>
 <td><code>media</code></td>
@@ -1347,11 +1343,11 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>GET /highlight</code></td>
-<td><code>highlight_info</code></td>
+<td><code>highlight_info</code>, <code>highlight_pk_from_url</code></td>
 </tr>
 <tr>
 <td><code>PATCH /highlight</code></td>
-<td><code>highlight_edit</code></td>
+<td><code>highlight_change_cover</code>, <code>highlight_change_title</code>, <code>highlight_edit</code></td>
 </tr>
 <tr>
 <td><code>POST /highlight</code></td>
@@ -3168,16 +3164,16 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>highlight_change_cover(self, highlight_pk: str, cover_path: pathlib._local.Path) -&gt; aiograpi.types.Highlight</code></td>
 <td><code>highlight</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>PATCH /highlight</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>highlight_change_title(self, highlight_pk: str, title: str) -&gt; aiograpi.types.Highlight</code></td>
 <td><code>highlight</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>PATCH /highlight</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>highlight_create(self, title: str, story_ids: List[str], cover_story_id: str = '', crop_rect: List[float] = [0.0, 0.21830457, 1.0, 0.78094524]) -&gt; aiograpi.types.Highlight</code></td>
@@ -3217,9 +3213,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>highlight_pk_from_url(self, url: str) -&gt; str</code></td>
 <td><code>highlight</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /highlight</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>highlight_remove_stories(self, highlight_pk: str, removed_media_ids: List[str]) -&gt; aiograpi.types.Highlight</code></td>

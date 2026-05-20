@@ -452,6 +452,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#highlight" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Highlight
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#user-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -766,6 +777,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#highlight" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Highlight
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#user-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1046,6 +1068,17 @@ or changing Instagram state.</p>
   <code>code</code> for a share URL.</li>
 <li><code>GET /share?code=...</code> returns the decoded share <code>type</code>, <code>pk</code>, and original
   <code>code</code> for an encoded share code.</li>
+</ul>
+<h2 id="highlight">Highlight</h2>
+<p>Highlight routes manage Story highlights and accept either the Instagram
+highlight PK or a highlight URL where lookup can be resolved from a URL:</p>
+<ul>
+<li><code>GET /highlight?highlight_pk=...</code> returns highlight details by PK.</li>
+<li><code>GET /highlight?url=...</code> resolves the PK from the URL and returns highlight
+  details.</li>
+<li><code>PATCH /highlight</code> updates title, cover, and story membership. A title-only
+  patch uses aiograpi's dedicated title-change method, and <code>cover_picture</code>
+  uploads a cover image through aiograpi's dedicated cover-change method.</li>
 </ul>
 <h2 id="user-discovery">User Discovery</h2>
 <p>User discovery routes live under the target user context and return raw
