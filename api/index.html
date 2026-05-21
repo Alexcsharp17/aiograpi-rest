@@ -1097,8 +1097,11 @@ check account and proxy health before retrying.</p>
   <code>DELETE /account/bio-links</code>.</li>
 <li><code>DELETE /account/bio-links</code> removes one or more bio links by <code>link_ids</code>.</li>
 <li><code>PATCH /account/password</code> changes the authenticated account password.</li>
-<li><code>POST /account/password/reset</code> sends a password reset flow for a username.</li>
-<li><code>POST /account/email/confirm</code> sends an email confirmation code.</li>
+<li><code>POST /account/password/reset</code> requests a password reset link or code by
+  username, email, or phone <code>identifier</code>.</li>
+<li><code>POST /account/email/confirmation</code> sends an email confirmation code.</li>
+<li><code>POST /account/email/confirm</code> confirms a pending email change with <code>email</code>
+  and <code>code</code>.</li>
 <li><code>POST /account/phone/confirm</code> sends a phone confirmation code.</li>
 </ul>
 <h2 id="notification-settings">Notification Settings</h2>
@@ -1272,6 +1275,14 @@ workflows.</p>
 <li><code>GET /track/stream</code> returns streamed media for a track <code>id</code>.</li>
 <li><code>GET /track/download/by/url</code> downloads track audio from a URL.</li>
 <li><code>GET /music/feed/browser</code> returns music candidates for feed posts.</li>
+<li><code>GET /music/search</code> searches the current app music catalog.</li>
+<li><code>GET /music/keywords</code> searches music typeahead keywords.</li>
+<li><code>GET /music/trending</code> returns trending music candidates.</li>
+<li><code>GET /music/trends/top</code> returns top music trends.</li>
+<li><code>GET /music/clips/browser</code> returns music candidates for Reels.</li>
+<li><code>POST /music/bookmark</code> bookmarks original audio.</li>
+<li><code>GET /music/original-audio/title/availability</code> checks whether an original
+  audio title is valid.</li>
 </ul>
 <h2 id="livestreams">Livestreams</h2>
 <p>Livestream routes manage the authenticated account's Instagram Live broadcast
@@ -1285,6 +1296,8 @@ action paths:</p>
   <code>ended</code>.</li>
 <li><code>GET /media/livestream/comments</code> lists live comments for a <code>broadcast_id</code>.</li>
 <li><code>GET /media/livestream/viewers</code> lists live viewers for a <code>broadcast_id</code>.</li>
+<li><code>POST /media/note</code> creates a note attached to a media item.</li>
+<li><code>DELETE /media/note</code> deletes a media-attached note by <code>note_id</code>.</li>
 </ul>
 <h2 id="notes">Notes</h2>
 <ul>
@@ -1319,6 +1332,15 @@ belong to a media object.</p>
 </ul>
 <h2 id="direct">Direct</h2>
 <ul>
+<li><code>GET /direct/channels</code> lists Direct channels, optionally filtered by
+  <code>user_id</code> and repeated <code>thread_subtypes</code>.</li>
+<li><code>GET /direct/interop/upgraded</code> reports whether the account has upgraded
+  interop messaging.</li>
+<li><code>GET /direct/requests/preview</code> returns a lightweight pending requests
+  preview.</li>
+<li><code>GET /direct/genai/bots</code> lists generated AI bot suggestions for Direct.</li>
+<li><code>PATCH /direct/e2ee/eligibility</code> updates the account's Direct E2EE
+  eligibility state.</li>
 <li><code>GET /direct/pending/inbox</code> lists pending direct request threads up to
   <code>amount</code>.</li>
 <li><code>GET /direct/spam/inbox</code> lists spam direct request threads up to <code>amount</code>.</li>
@@ -1363,7 +1385,6 @@ user PKs or <code>username</code> for usernames. If a legacy client passes a use
 <p>Additional discovery collection routes return plain arrays when <code>aiograpi</code> does
 not expose a cursor for the underlying method:</p>
 <ul>
-<li><code>GET /hashtag/related</code></li>
 <li><code>GET /hashtag/reels</code></li>
 <li><code>GET /location/guides</code></li>
 <li><code>GET /user/guides</code></li>
@@ -1388,6 +1409,11 @@ optional configure data. This applies to:</p>
 <li><code>POST /photo/upload/with/music</code></li>
 <li><code>POST /clip/upload/with/music</code></li>
 <li><code>POST /album/upload/with/music</code></li>
+</ul>
+<p>Media notes use the same JSON field style for optional <code>extra_data</code>:</p>
+<ul>
+<li><code>POST /media/note</code></li>
+<li><code>DELETE /media/note</code></li>
 </ul>
 <p><code>device_status</code> is an optional JSON object for
 <code>GET /clip/share/facebook/config</code>.</p>
