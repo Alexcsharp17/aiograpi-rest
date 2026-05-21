@@ -474,6 +474,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#id-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ID Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#user-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -832,6 +843,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#id-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ID Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#user-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1164,6 +1186,11 @@ story media collection:</p>
   <code>user_ids</code> query parameters, for example
   <code>user_ids=123&amp;user_ids=456</code>.</li>
 </ul>
+<h2 id="id-parameters">ID Parameters</h2>
+<p>Instagram user primary keys are exposed as strings in the REST API. Use
+<code>user_id=25025320</code> for a single user and repeat <code>user_ids</code> for lists, for
+example <code>user_ids=123&amp;user_ids=456</code>. Treat them as opaque IDs in generated
+clients even when they contain only digits.</p>
 <h2 id="user-discovery">User Discovery</h2>
 <p>User discovery routes live under the target user context and return raw
 Instagram-shaped objects where <code>aiograpi</code> exposes variable discovery payloads:</p>
