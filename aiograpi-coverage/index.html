@@ -582,9 +582,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <h2 id="summary">Summary</h2>
 <ul>
 <li>Public <code>aiograpi.Client</code> methods: <strong>500</strong></li>
-<li>Methods reached by REST routes: <strong>267</strong></li>
-<li>Methods not exposed as REST routes: <strong>233</strong></li>
-<li>Candidate REST backlog: <strong>8</strong></li>
+<li>Methods reached by REST routes: <strong>268</strong></li>
+<li>Methods not exposed as REST routes: <strong>232</strong></li>
+<li>Candidate REST backlog: <strong>7</strong></li>
 </ul>
 <h2 id="rest-relevance">REST Relevance</h2>
 <table>
@@ -598,12 +598,12 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tbody>
 <tr>
 <td><code>exposed</code></td>
-<td style="text-align: right;">267</td>
+<td style="text-align: right;">268</td>
 <td>Already used by public REST routes.</td>
 </tr>
 <tr>
 <td><code>candidate</code></td>
-<td style="text-align: right;">8</td>
+<td style="text-align: right;">7</td>
 <td>Likely useful as a future user-facing REST endpoint.</td>
 </tr>
 <tr>
@@ -865,8 +865,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>story</code></td>
-<td style="text-align: right;">12</td>
-<td style="text-align: right;">2</td>
+<td style="text-align: right;">13</td>
+<td style="text-align: right;">1</td>
 <td style="text-align: right;">7</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">21</td>
@@ -936,7 +936,7 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>story</code></td>
-<td><code>sticker_tray</code>, <code>users_stories_gql</code></td>
+<td><code>users_stories_gql</code></td>
 </tr>
 <tr>
 <td><code>totp</code></td>
@@ -1752,6 +1752,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>PATCH /story/seen</code></td>
 <td><code>story_seen</code></td>
+</tr>
+<tr>
+<td><code>GET /story/stickers</code></td>
+<td><code>sticker_tray</code></td>
 </tr>
 <tr>
 <td><code>POST /story/upload</code></td>
@@ -4647,9 +4651,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>sticker_tray(self) -&gt; dict</code></td>
 <td><code>story</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /story/stickers</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>story_delete(self, story_pk: str) -&gt; bool</code></td>
