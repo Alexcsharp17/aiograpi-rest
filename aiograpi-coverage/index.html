@@ -582,9 +582,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <h2 id="summary">Summary</h2>
 <ul>
 <li>Public <code>aiograpi.Client</code> methods: <strong>500</strong></li>
-<li>Methods reached by REST routes: <strong>271</strong></li>
-<li>Methods not exposed as REST routes: <strong>229</strong></li>
-<li>Candidate REST backlog: <strong>4</strong></li>
+<li>Methods reached by REST routes: <strong>274</strong></li>
+<li>Methods not exposed as REST routes: <strong>226</strong></li>
+<li>Candidate REST backlog: <strong>0</strong></li>
 </ul>
 <h2 id="rest-relevance">REST Relevance</h2>
 <table>
@@ -598,12 +598,12 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tbody>
 <tr>
 <td><code>exposed</code></td>
-<td style="text-align: right;">271</td>
+<td style="text-align: right;">274</td>
 <td>Already used by public REST routes.</td>
 </tr>
 <tr>
 <td><code>candidate</code></td>
-<td style="text-align: right;">4</td>
+<td style="text-align: right;">0</td>
 <td>Likely useful as a future user-facing REST endpoint.</td>
 </tr>
 <tr>
@@ -613,7 +613,7 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>internal</code></td>
-<td style="text-align: right;">102</td>
+<td style="text-align: right;">103</td>
 <td>Low-level auth/request/configuration/signup/challenge helpers that should not be mirrored blindly.</td>
 </tr>
 </tbody>
@@ -714,9 +714,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>explore</code></td>
 <td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">0</td>
 <td style="text-align: right;">3</td>
 </tr>
 <tr>
@@ -729,8 +729,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>fundraiser</code></td>
-<td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
@@ -793,8 +793,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>multiple_accounts</code></td>
-<td style="text-align: right;">0</td>
 <td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">2</td>
@@ -923,16 +923,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </thead>
 <tbody>
 <tr>
-<td><code>explore</code></td>
-<td><code>report_explore_media</code></td>
-</tr>
-<tr>
-<td><code>fundraiser</code></td>
-<td><code>standalone_fundraiser_info_v1</code></td>
-</tr>
-<tr>
-<td><code>multiple_accounts</code></td>
-<td><code>featured_accounts_v1</code>, <code>get_account_family_v1</code></td>
+<td></td>
+<td></td>
 </tr>
 </tbody>
 </table>
@@ -988,6 +980,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>PATCH /account/external-url</code></td>
 <td><code>set_external_url</code></td>
+</tr>
+<tr>
+<td><code>GET /account/family</code></td>
+<td><code>get_account_family_v1</code></td>
 </tr>
 <tr>
 <td><code>GET /account/feed/new</code></td>
@@ -1814,6 +1810,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>creator_info</code></td>
 </tr>
 <tr>
+<td><code>GET /user/featured/accounts</code></td>
+<td><code>featured_accounts_v1</code></td>
+</tr>
+<tr>
 <td><code>DELETE /user/follow</code></td>
 <td><code>user_unfollow</code></td>
 </tr>
@@ -1840,6 +1840,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>GET /user/friendships</code></td>
 <td><code>user_friendships_v1</code></td>
+</tr>
+<tr>
+<td><code>GET /user/fundraiser</code></td>
+<td><code>standalone_fundraiser_info_v1</code></td>
 </tr>
 <tr>
 <td><code>GET /user/guides</code></td>
@@ -2975,9 +2979,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>featured_accounts_v1(self, target_user_id: str) -&gt; dict</code></td>
 <td><code>multiple_accounts</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /user/featured/accounts</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>feed_user_stream_item(self, item_id: str, is_pull_to_refresh: bool = False) -&gt; dict</code></td>
@@ -3038,9 +3042,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>get_account_family_v1(self) -&gt; dict</code></td>
 <td><code>multiple_accounts</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /account/family</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>get_note_by_user(self, notes: List[aiograpi.types.Note], username: str) -&gt; Optional[aiograpi.types.Note]</code></td>
@@ -4404,8 +4408,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <td><code>report_explore_media(self, media_pk: int)</code></td>
 <td><code>explore</code></td>
 <td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>internal</code></td>
+<td>low-level aiograpi helper or unsafe generic surface</td>
 </tr>
 <tr>
 <td><code>request_log(self, response)</code></td>
@@ -4648,9 +4652,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>standalone_fundraiser_info_v1(self, user_id: str)</code></td>
 <td><code>fundraiser</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /user/fundraiser</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>sticker_tray(self) -&gt; dict</code></td>

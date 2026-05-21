@@ -1173,6 +1173,10 @@ Instagram-shaped objects where <code>aiograpi</code> exposes variable discovery 
   suggestion IDs from <code>/user/suggestions</code>.</li>
 <li><code>GET /user/recommendations</code> returns category-based recommended accounts for a
   target profile.</li>
+<li><code>GET /user/featured/accounts</code> returns Instagram's featured-account
+  suggestions for a target profile.</li>
+<li><code>GET /user/fundraiser</code> returns standalone fundraiser info for a target
+  profile.</li>
 <li><code>GET /user/creator</code> returns creator metadata for a target profile as
   <code>{ "user": ..., "info": ... }</code>.</li>
 <li><code>GET /user/profile/web</code> returns Instagram's web-profile payload for a
@@ -1186,6 +1190,8 @@ Instagram-shaped objects where <code>aiograpi</code> exposes variable discovery 
 <p><code>GET /account/feed/new</code> belongs to the authenticated account context and returns
 whether Instagram says new timeline feed items are available.
 <code>GET /account/feed/user/stream-item</code> returns a feed stream item for the
+authenticated account.
+<code>GET /account/family</code> returns Instagram's account-family payload for the
 authenticated account.</p>
 <h2 id="reels">Reels</h2>
 <p>Global Reels feed routes live under the <code>Reels</code> tag and return arrays of media
