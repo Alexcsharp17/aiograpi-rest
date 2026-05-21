@@ -463,6 +463,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#story" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Story
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#user-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -810,6 +821,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#story" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Story
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#user-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1123,6 +1145,16 @@ highlight PK or a highlight URL where lookup can be resolved from a URL:</p>
 <li><code>PATCH /highlight</code> updates title, cover, and story membership. A title-only
   patch uses aiograpi's dedicated title-change method, and <code>cover_picture</code>
   uploads a cover image through aiograpi's dedicated cover-change method.</li>
+</ul>
+<h2 id="story">Story</h2>
+<p>Story archive routes expose both archive day pages and the actual archived
+story media collection:</p>
+<ul>
+<li><code>GET /story/archive</code> returns paginated archive day groups with <code>items</code> and
+  <code>next_cursor</code>.</li>
+<li><code>GET /story/archive/media</code> returns archived stories from the authenticated
+  account. Pass <code>amount=0</code> to keep aiograpi's default of returning all
+  available archived stories, or a positive amount to limit the list.</li>
 </ul>
 <h2 id="user-discovery">User Discovery</h2>
 <p>User discovery routes live under the target user context and return raw
