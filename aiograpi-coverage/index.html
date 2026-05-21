@@ -582,9 +582,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <h2 id="summary">Summary</h2>
 <ul>
 <li>Public <code>aiograpi.Client</code> methods: <strong>500</strong></li>
-<li>Methods reached by REST routes: <strong>269</strong></li>
-<li>Methods not exposed as REST routes: <strong>231</strong></li>
-<li>Candidate REST backlog: <strong>6</strong></li>
+<li>Methods reached by REST routes: <strong>271</strong></li>
+<li>Methods not exposed as REST routes: <strong>229</strong></li>
+<li>Candidate REST backlog: <strong>4</strong></li>
 </ul>
 <h2 id="rest-relevance">REST Relevance</h2>
 <table>
@@ -598,12 +598,12 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tbody>
 <tr>
 <td><code>exposed</code></td>
-<td style="text-align: right;">269</td>
+<td style="text-align: right;">271</td>
 <td>Already used by public REST routes.</td>
 </tr>
 <tr>
 <td><code>candidate</code></td>
-<td style="text-align: right;">6</td>
+<td style="text-align: right;">4</td>
 <td>Likely useful as a future user-facing REST endpoint.</td>
 </tr>
 <tr>
@@ -881,8 +881,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>totp</code></td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">2</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">4</td>
@@ -933,10 +933,6 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>multiple_accounts</code></td>
 <td><code>featured_accounts_v1</code>, <code>get_account_family_v1</code></td>
-</tr>
-<tr>
-<td><code>totp</code></td>
-<td><code>totp_generate_code</code>, <code>totp_generate_seed</code></td>
 </tr>
 </tbody>
 </table>
@@ -1100,6 +1096,14 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>POST /auth/totp</code></td>
 <td><code>totp_enable</code></td>
+</tr>
+<tr>
+<td><code>GET /auth/totp/code</code></td>
+<td><code>totp_generate_code</code></td>
+</tr>
+<tr>
+<td><code>GET /auth/totp/seed</code></td>
+<td><code>totp_generate_seed</code></td>
 </tr>
 <tr>
 <td><code>GET /clip/creation/info</code></td>
@@ -4770,16 +4774,16 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>totp_generate_code(seed: str) -&gt; str</code></td>
 <td><code>totp</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /auth/totp/code</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>totp_generate_seed(self) -&gt; str</code></td>
 <td><code>totp</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /auth/totp/seed</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>track_download_by_url(self, url: str, filename: str = '', folder: pathlib._local.Path = '') -&gt; pathlib._local.Path</code></td>

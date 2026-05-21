@@ -1013,6 +1013,9 @@ any of:</p>
 <h3 id="two-factor-login">Two-Factor Login</h3>
 <p>If <code>POST /auth/login</code> returns <code>TwoFactorRequired</code>, retry the same endpoint with
 the same <code>username</code> and <code>password</code> plus <code>verification_code</code>.</p>
+<p><code>GET /auth/totp/seed</code> generates a TOTP seed for the authenticated session.
+<code>GET /auth/totp/code?seed=...</code> generates the current six-digit TOTP code from a
+seed without requiring a session.</p>
 <p>If it returns <code>ChallengeRequired</code>, resolve the Instagram challenge in the
 account/session context first, then retry login or import a known-good saved
 session through <code>PATCH /auth/settings</code>.</p>
