@@ -582,9 +582,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <h2 id="summary">Summary</h2>
 <ul>
 <li>Public <code>aiograpi.Client</code> methods: <strong>500</strong></li>
-<li>Methods reached by REST routes: <strong>268</strong></li>
-<li>Methods not exposed as REST routes: <strong>232</strong></li>
-<li>Candidate REST backlog: <strong>7</strong></li>
+<li>Methods reached by REST routes: <strong>269</strong></li>
+<li>Methods not exposed as REST routes: <strong>231</strong></li>
+<li>Candidate REST backlog: <strong>6</strong></li>
 </ul>
 <h2 id="rest-relevance">REST Relevance</h2>
 <table>
@@ -598,12 +598,12 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tbody>
 <tr>
 <td><code>exposed</code></td>
-<td style="text-align: right;">268</td>
+<td style="text-align: right;">269</td>
 <td>Already used by public REST routes.</td>
 </tr>
 <tr>
 <td><code>candidate</code></td>
-<td style="text-align: right;">7</td>
+<td style="text-align: right;">6</td>
 <td>Likely useful as a future user-facing REST endpoint.</td>
 </tr>
 <tr>
@@ -865,8 +865,8 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 </tr>
 <tr>
 <td><code>story</code></td>
-<td style="text-align: right;">13</td>
-<td style="text-align: right;">1</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">7</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">21</td>
@@ -933,10 +933,6 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>multiple_accounts</code></td>
 <td><code>featured_accounts_v1</code>, <code>get_account_family_v1</code></td>
-</tr>
-<tr>
-<td><code>story</code></td>
-<td><code>users_stories_gql</code></td>
 </tr>
 <tr>
 <td><code>totp</code></td>
@@ -1764,6 +1760,10 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>POST /story/upload/by/url</code></td>
 <td><code>photo_upload_to_story</code>, <code>user_stories</code>, <code>video_upload_to_story</code></td>
+</tr>
+<tr>
+<td><code>GET /story/users</code></td>
+<td><code>users_stories_gql</code></td>
 </tr>
 <tr>
 <td><code>GET /story/viewers</code></td>
@@ -5295,9 +5295,9 @@ the installed <code>aiograpi.Client</code> class and the local FastAPI router im
 <tr>
 <td><code>users_stories_gql(self, user_ids: List[str], amount: int = 0) -&gt; List[aiograpi.types.UserShort]</code></td>
 <td><code>story</code></td>
-<td>-</td>
-<td><code>candidate</code></td>
-<td>potential user-facing REST endpoint</td>
+<td><code>GET /story/users</code></td>
+<td><code>exposed</code></td>
+<td>used by at least one public REST route</td>
 </tr>
 <tr>
 <td><code>usertag_medias(self, user_id: int, amount: int = 0) -&gt; List[aiograpi.types.Media]</code></td>

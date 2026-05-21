@@ -1157,6 +1157,9 @@ story media collection:</p>
   available archived stories, or a positive amount to limit the list.</li>
 <li><code>GET /story/stickers</code> returns Instagram's raw story sticker tray payload for
   building story upload decorations.</li>
+<li><code>GET /story/users</code> returns story lists for multiple users. Pass repeated
+  <code>user_ids</code> query parameters, for example
+  <code>user_ids=123&amp;user_ids=456</code>.</li>
 </ul>
 <h2 id="user-discovery">User Discovery</h2>
 <p>User discovery routes live under the target user context and return raw
