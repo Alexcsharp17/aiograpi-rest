@@ -1,0 +1,32 @@
+{
+  "platforms": ["instagram"],
+  "jobStatuses": [
+    "queued",
+    "running",
+    "paused",
+    "completed",
+    "partially_completed",
+    "failed",
+    "cancelled",
+    "challenge_required",
+    "rate_limited",
+    "session_expired",
+    "banned_or_locked"
+  ],
+  "instagramActionTypes": [
+    "instagram.account.health",
+    "instagram.profile.get",
+    "instagram.media.upload.photo",
+    "instagram.media.upload.video",
+    "instagram.media.upload.reel",
+    "instagram.story.upload",
+    "instagram.comments.list",
+    "instagram.comments.reply",
+    "instagram.comments.delete",
+    "instagram.comments.pin",
+    "instagram.dm.inbox",
+    "instagram.dm.send",
+    "instagram.dm.reply",
+    "instagram.insights.basic"
+  ]
+}

@@ -202,6 +202,10 @@ async def test_openapi_uses_sessionid_authorize_button_for_protected_routes():
         "/build",
         "/deps",
     }
+    sspanel_paths = {
+        path for path in schema["paths"]
+        if path.startswith("/sspanel/")
+    }
     for path, methods in schema["paths"].items():
         for operation in methods.values():
             parameters = operation.get("parameters", [])
@@ -210,6 +214,8 @@ async def test_openapi_uses_sessionid_authorize_button_for_protected_routes():
             ], path
             if path in public_paths:
                 assert "security" not in operation
+            elif path in sspanel_paths:
+                assert operation["security"] == [{"SspanelExecutorKey": []}], path
             else:
                 assert operation["security"] == [{"SessionId": []}], path
 
@@ -393,6 +399,11 @@ async def test_openapi_uses_rest_http_methods():
         "/search/web/hashtags": {"get"},
         "/search/web/top": {"get"},
         "/share": {"get"},
+        "/sspanel/accounts/import-session": {"post"},
+        "/sspanel/accounts/{executor_account_id}/health": {"get"},
+        "/sspanel/jobs": {"post"},
+        "/sspanel/jobs/{job_id}": {"get"},
+        "/sspanel/jobs/{job_id}/cancel": {"post"},
         "/story": {"delete", "get"},
         "/story/archive": {"get"},
         "/story/archive/media": {"get"},
@@ -601,6 +612,7 @@ async def test_openapi_uses_human_friendly_tag_names():
         "Reels",
         "Search",
         "Share",
+        "SS-panel",
         "Story",
         "System",
         "Track (Music)",
@@ -630,6 +642,7 @@ async def test_openapi_uses_human_friendly_tag_names():
         "IGTV (Legacy)",
         "Insights",
         "Track (Music)",
+        "SS-panel",
         "System",
     ]
 

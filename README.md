@@ -1,5 +1,17 @@
 # aiograpi-rest
 
+## SS-panel fork notes
+
+This checkout is used by SS-panel as `modules/aiograpi-rest` on branch
+`sspanel-main`.
+
+- Keep `upstream` pointed at `https://github.com/subzeroid/aiograpi-rest.git`.
+- Replace `origin` with the project-owner fork when it exists.
+- SS-panel uses only the facade under `/sspanel/*`; raw aiograpi-rest routes
+  remain available for executor internals and local diagnostics.
+- The mirrored wire contract is `aiograpi_rest/sspanel_contract.json`; keep it
+  synchronized with `@sspanel/ss-toolkit/shared-types/externalExecutor.ts`.
+
 **RESTful HTTP service that wraps [`aiograpi`](https://github.com/subzeroid/aiograpi) (the async fork of `instagrapi`) so you can call Instagram's private API from any programming language.** Run it as a Docker sidecar next to your application; hit it from Node, Go, PHP, Java, C#, Ruby, Swift, Bash — anything that speaks HTTP.
 
 This is the cross-language exit when your stack is not Python and the maintained Instagram libraries in your own language have gone stale or been archived (which, as of 2026, is most of them — see the [language-by-language survey](https://instagrapi.com/guides/instagram-api-libraries-by-language) on instagrapi.com).

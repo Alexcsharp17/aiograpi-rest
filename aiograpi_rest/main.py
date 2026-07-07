@@ -34,6 +34,7 @@ from aiograpi_rest.routers import (
     reels,
     search,
     share,
+    sspanel,
     story,
     track,
     user,
@@ -120,6 +121,7 @@ OPENAPI_TAGS = [
     {"name": "IGTV (Legacy)", "description": "Legacy IGTV operations still exposed by aiograpi."},
     {"name": "Insights", "description": "Account and media insights."},
     {"name": "Track (Music)", "description": "Music track lookup, stream, download, and browser operations."},
+    {"name": "SS-panel", "description": "SS-panel Instagram executor facade routes."},
     {"name": "System", "description": "Runtime service metadata."},
 ]
 OPERATION_SUMMARIES = {
@@ -589,6 +591,7 @@ app.include_router(auth.router)
 app.include_router(account.router)
 app.include_router(search.router)
 app.include_router(share.router)
+app.include_router(sspanel.router)
 app.include_router(reels.router)
 app.include_router(explore.router)
 app.include_router(media.router)

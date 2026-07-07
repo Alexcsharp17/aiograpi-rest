@@ -279,6 +279,11 @@ the installed `aiograpi.Client` class and the local FastAPI router implementatio
 | `GET /search/web/hashtags` | `web_search_topsearch_hashtags` |
 | `GET /search/web/top` | `web_search_topsearch` |
 | `GET /share` | `share_code_from_url`, `share_info`, `share_info_by_url` |
+| `POST /sspanel/accounts/import-session` | - |
+| `GET /sspanel/accounts/{executor_account_id}/health` | - |
+| `POST /sspanel/jobs` | `account_info`, `login_by_sessionid`, `set_proxy`, `set_settings` |
+| `GET /sspanel/jobs/{job_id}` | - |
+| `POST /sspanel/jobs/{job_id}/cancel` | - |
 | `DELETE /story` | `story_delete` |
 | `GET /story` | `story_info`, `story_pk_from_url` |
 | `GET /story/archive` | `archive_story_days_paginated_v1` |
@@ -348,7 +353,7 @@ the installed `aiograpi.Client` class and the local FastAPI router implementatio
 |---|---|---|---|---|
 | `account_change_picture(self, path: pathlib._local.Path) -> aiograpi.types.UserShort` | `account` | `PATCH /account/picture` | `exposed` | used by at least one public REST route |
 | `account_edit(self, **data: Dict) -> aiograpi.types.Account` | `account` | `PATCH /account` | `exposed` | used by at least one public REST route |
-| `account_info(self) -> aiograpi.types.Account` | `account` | `GET /account` | `exposed` | used by at least one public REST route |
+| `account_info(self) -> aiograpi.types.Account` | `account` | `GET /account`<br>`POST /sspanel/jobs` | `exposed` | used by at least one public REST route |
 | `account_security_info(self) -> dict` | `account` | `GET /account/security` | `exposed` | used by at least one public REST route |
 | `account_set_biography(self, biography: str) -> bool` | `account` | `PATCH /account/biography` | `exposed` | used by at least one public REST route |
 | `account_set_private(self) -> bool` | `account` | `PATCH /account/privacy` | `exposed` | used by at least one public REST route |
@@ -582,7 +587,7 @@ the installed `aiograpi.Client` class and the local FastAPI router implementatio
 | `location_search_pk(self, location_pk: int) -> aiograpi.types.Location` | `location` | - | `internal` | low-level aiograpi helper or unsafe generic surface |
 | `location_story_sticker_id(self, location: aiograpi.types.Location) -> str` | `location` | - | `internal` | low-level aiograpi helper or unsafe generic surface |
 | `login(self, username: Optional[str] = None, password: Optional[str] = None, relogin: bool = False, verification_code: str = '') -> bool` | `auth` | `POST /auth/login` | `exposed` | used by at least one public REST route |
-| `login_by_sessionid(self, sessionid: str) -> bool` | `auth` | `POST /auth/login/by/sessionid` | `exposed` | used by at least one public REST route |
+| `login_by_sessionid(self, sessionid: str) -> bool` | `auth` | `POST /auth/login/by/sessionid`<br>`POST /sspanel/jobs` | `exposed` | used by at least one public REST route |
 | `login_flow(self) -> bool` | `auth` | - | `internal` | low-level aiograpi helper or unsafe generic surface |
 | `logout(self) -> bool` | `auth` | - | `internal` | low-level aiograpi helper or unsafe generic surface |
 | `media_archive(self, media_id: str, revert: bool = False) -> bool` | `media` | `POST /media/archive` | `exposed` | used by at least one public REST route |
@@ -735,10 +740,10 @@ the installed `aiograpi.Client` class and the local FastAPI router implementatio
 | `set_ig_u_rur(self, value)` | `private` | - | `internal` | low-level aiograpi helper or unsafe generic surface |
 | `set_ig_www_claim(self, value)` | `private` | - | `internal` | low-level aiograpi helper or unsafe generic surface |
 | `set_locale(self, locale: str = 'en_US')` | `private` | `POST /auth/login`<br>`POST /auth/login/by/sessionid`<br>`PATCH /auth/settings` | `exposed` | used by at least one public REST route |
-| `set_proxy(self, dsn: Optional[str])` | `aiograpi` | `POST /auth/login`<br>`POST /auth/login/by/sessionid`<br>`PATCH /auth/settings` | `exposed` | used by at least one public REST route |
+| `set_proxy(self, dsn: Optional[str])` | `aiograpi` | `POST /auth/login`<br>`POST /auth/login/by/sessionid`<br>`PATCH /auth/settings`<br>`POST /sspanel/jobs` | `exposed` | used by at least one public REST route |
 | `set_push_disabled(self, disabled: bool = True)` | `private` | - | `internal` | low-level aiograpi helper or unsafe generic surface |
 | `set_retry_config(self, request_timeout: Union[int, float, NoneType] = None, public_request_retries_count: int = None, public_request_retries_timeout: Union[int, float] = None, session_retry_total: int = None, session_retry_backoff_factor: Union[int, float] = None, session_retry_statuses: list = None, public_transport: Optional[str] = None, public_transport_impersonate: Optional[str] = None) -> bool` | `auth` | - | `internal` | low-level aiograpi helper or unsafe generic surface |
-| `set_settings(self, settings: Dict) -> bool` | `auth` | `PATCH /auth/settings` | `exposed` | used by at least one public REST route |
+| `set_settings(self, settings: Dict) -> bool` | `auth` | `PATCH /auth/settings`<br>`POST /sspanel/jobs` | `exposed` | used by at least one public REST route |
 | `set_timezone_name(self, timezone_name: str = '')` | `private` | - | `internal` | low-level aiograpi helper or unsafe generic surface |
 | `set_timezone_offset(self, seconds: int = 0, timezone_name=None)` | `private` | `POST /auth/login`<br>`POST /auth/login/by/sessionid`<br>`PATCH /auth/settings` | `exposed` | used by at least one public REST route |
 | `set_tls_verify(self, tls_verify: Union[bool, str]) -> bool` | `auth` | - | `internal` | low-level aiograpi helper or unsafe generic surface |

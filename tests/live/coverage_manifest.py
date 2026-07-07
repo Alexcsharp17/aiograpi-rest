@@ -91,6 +91,12 @@ UPLOAD_MUTATIONS = {
     ("POST", "/video/upload/by/url"): "GET /media",
 }
 
+SSPANEL_MUTATIONS = {
+    ("POST", "/sspanel/accounts/import-session"): "GET /sspanel/accounts/{executor_account_id}/health",
+    ("POST", "/sspanel/jobs"): "GET /sspanel/jobs/{job_id}",
+    ("POST", "/sspanel/jobs/{job_id}/cancel"): "GET /sspanel/jobs/{job_id}",
+}
+
 GUARDED_PREFIX_REASONS = {
     ("/account", "account mutation"): "changes authenticated account state or depends on inbound follow requests",
     ("/auth/challenge", "challenge"): "requires a real active Instagram challenge",
@@ -115,6 +121,8 @@ def operation_policy(method: str, path: str) -> LivePolicy:
 
     if path in SYSTEM_PATHS:
         return LivePolicy("system")
+    if (method, path) in SSPANEL_MUTATIONS:
+        return LivePolicy("sspanel", verify_with=SSPANEL_MUTATIONS[(method, path)])
     if method == "GET" and path.endswith(("/download", "/download/by/url", "/download/by/urls")):
         return LivePolicy("download", verify_with="binary/media validation")
     if method == "GET":
