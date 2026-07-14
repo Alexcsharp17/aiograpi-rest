@@ -14,6 +14,7 @@ dependencies = [
   "aiograpi==1.0.9",
   "python-multipart>=0.0.20,<1",
   "tinydb>=4.8,<5",
+  "cryptography>=43,<46",
   "requests>=2.32,<3",
   "aiofiles>=24.1,<25",
 ]

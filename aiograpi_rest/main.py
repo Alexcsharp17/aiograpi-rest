@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from aiograpi import exceptions as aiograpi_exceptions
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.openapi.utils import get_openapi
 from fastapi.routing import APIRoute
 from starlette.responses import JSONResponse, RedirectResponse, Response
@@ -121,7 +121,10 @@ OPENAPI_TAGS = [
     {"name": "IGTV (Legacy)", "description": "Legacy IGTV operations still exposed by aiograpi."},
     {"name": "Insights", "description": "Account and media insights."},
     {"name": "Track (Music)", "description": "Music track lookup, stream, download, and browser operations."},
-    {"name": "SS-panel", "description": "SS-panel Instagram executor facade routes."},
+    {
+        "name": "SS-panel Module API",
+        "description": "Versioned REST contract implemented by the Instagram module for SS-panel.",
+    },
     {"name": "System", "description": "Runtime service metadata."},
 ]
 OPERATION_SUMMARIES = {
@@ -613,6 +616,26 @@ app.include_router(story.user_router)
 app.include_router(insights.router)
 app.include_router(track.router)
 app.include_router(track.music_router)
+
+
+@app.on_event("startup")
+async def start_sspanel_executor_worker() -> None:
+    sspanel.start_worker()
+
+
+@app.on_event("shutdown")
+async def stop_sspanel_executor_worker() -> None:
+    sspanel.stop_worker()
+
+
+@app.middleware("http")
+async def legacy_sspanel_module_api_alias(request: Request, call_next):
+    path = request.scope.get("path", "")
+    if path == "/sspanel" or path.startswith("/sspanel/"):
+        aliased_path = f"/module/v1{path.removeprefix('/sspanel')}"
+        request.scope["path"] = aliased_path
+        request.scope["raw_path"] = aliased_path.encode()
+    return await call_next(request)
 
 
 @app.get("/", include_in_schema=False)

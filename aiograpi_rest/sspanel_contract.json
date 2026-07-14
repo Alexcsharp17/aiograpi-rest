@@ -1,5 +1,10 @@
 {
-  "platforms": ["instagram"],
+  "contractVersions": [
+    "1.0"
+  ],
+  "platforms": [
+    "instagram"
+  ],
   "jobStatuses": [
     "queued",
     "running",
@@ -13,6 +18,20 @@
     "session_expired",
     "banned_or_locked"
   ],
+  "eventTypes": [
+    "job.accepted",
+    "job.started",
+    "job.progressed",
+    "workflow.paused",
+    "action.completed",
+    "action.failed",
+    "account.health_changed",
+    "job.completed",
+    "job.partially_completed",
+    "job.rate_limited",
+    "job.failed",
+    "job.cancelled"
+  ],
   "instagramActionTypes": [
     "instagram.account.health",
     "instagram.profile.get",
@@ -21,12 +40,26 @@
     "instagram.media.upload.reel",
     "instagram.story.upload",
     "instagram.comments.list",
+    "instagram.warmup",
     "instagram.comments.reply",
+    "instagram.comments.smart_reply",
     "instagram.comments.delete",
     "instagram.comments.pin",
     "instagram.dm.inbox",
     "instagram.dm.send",
     "instagram.dm.reply",
     "instagram.insights.basic"
+  ],
+  "workflowTypes": [
+    "instagram.comments.smart_reply",
+    "instagram.warmup"
+  ],
+  "instagramImplementedCapabilities": [
+    "instagram.account.health",
+    "instagram.profile.get",
+    "instagram.comments.list",
+    "instagram.warmup",
+    "instagram.comments.reply",
+    "instagram.comments.smart_reply"
   ]
 }

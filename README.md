@@ -7,10 +7,32 @@ This checkout is used by SS-panel as `modules/aiograpi-rest` on branch
 
 - Keep `upstream` pointed at `https://github.com/subzeroid/aiograpi-rest.git`.
 - Replace `origin` with the project-owner fork when it exists.
-- SS-panel uses only the facade under `/sspanel/*`; raw aiograpi-rest routes
-  remain available for executor internals and local diagnostics.
+- SS-panel uses the standard module REST API under `/module/v1/*`; `/sspanel/*`
+  remains a temporary compatibility alias and is hidden from OpenAPI.
+- Raw aiograpi-rest routes remain available for executor internals and local
+  diagnostics.
 - The mirrored wire contract is `aiograpi_rest/sspanel_contract.json`; keep it
   synchronized with `@sspanel/ss-toolkit/shared-types/externalExecutor.ts`.
+- Executor job/account rows use SQLite WAL with AES-GCM encrypted JSON payloads.
+  Set `SSPANEL_EXECUTOR_ENCRYPTION_KEY` to a urlsafe-base64 encoded 32-byte key;
+  the service refuses to start without it unless the explicit development-only
+  `SSPANEL_EXECUTOR_ALLOW_INSECURE_DEV_STORAGE=true` flag is set.
+- The canonical schema is `modules/ss-toolkit/contracts/external-executor.schema.json`.
+  Regenerate the Python fixture with `python scripts/sync_sspanel_contract.py`.
+
+The SS-panel live contract test is intentionally opt-in. Run it only against a
+dedicated executor account and explicit credentials:
+
+```bash
+ALLOW_INSTAGRAM_EXECUTOR_LIVE=true \
+INSTAGRAM_EXECUTOR_URL=http://127.0.0.1:8000 \
+INSTAGRAM_EXECUTOR_API_KEY="$SSPANEL_EXECUTOR_API_KEY" \
+INSTAGRAM_LIVE_EXECUTOR_ACCOUNT_ID="ig_acc_test" \
+pytest -o addopts='' tests/live/test_sspanel_live.py -m live
+```
+
+The default `pytest` configuration excludes this test and does not require
+Instagram credentials.
 
 **RESTful HTTP service that wraps [`aiograpi`](https://github.com/subzeroid/aiograpi) (the async fork of `instagrapi`) so you can call Instagram's private API from any programming language.** Run it as a Docker sidecar next to your application; hit it from Node, Go, PHP, Java, C#, Ruby, Swift, Bash — anything that speaks HTTP.
 

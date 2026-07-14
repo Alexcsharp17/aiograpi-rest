@@ -16,6 +16,7 @@ SYSTEM_PATHS = {
     "/metrics",
     "/build",
     "/deps",
+    "/module/v1/health",
 }
 
 SESSION_MUTATIONS = {
@@ -92,9 +93,12 @@ UPLOAD_MUTATIONS = {
 }
 
 SSPANEL_MUTATIONS = {
-    ("POST", "/sspanel/accounts/import-session"): "GET /sspanel/accounts/{executor_account_id}/health",
-    ("POST", "/sspanel/jobs"): "GET /sspanel/jobs/{job_id}",
-    ("POST", "/sspanel/jobs/{job_id}/cancel"): "GET /sspanel/jobs/{job_id}",
+    ("POST", "/module/v1/accounts/import-session"): "GET /module/v1/accounts/{executor_account_id}/health",
+    ("POST", "/module/v1/jobs"): "GET /module/v1/jobs/{job_id}",
+    ("POST", "/module/v1/jobs/{job_id}/cancel"): "GET /module/v1/jobs/{job_id}",
+    ("POST", "/module/v1/jobs/{job_id}/input"): "GET /module/v1/jobs/{job_id}",
+    ("POST", "/module/v1/jobs/{job_id}/pause"): "GET /module/v1/jobs/{job_id}",
+    ("POST", "/module/v1/jobs/{job_id}/resume"): "GET /module/v1/jobs/{job_id}",
 }
 
 GUARDED_PREFIX_REASONS = {

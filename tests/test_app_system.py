@@ -201,10 +201,11 @@ async def test_openapi_uses_sessionid_authorize_button_for_protected_routes():
         "/metrics",
         "/build",
         "/deps",
+        "/module/v1/health",
     }
-    sspanel_paths = {
+    module_paths = {
         path for path in schema["paths"]
-        if path.startswith("/sspanel/")
+        if path.startswith("/module/v1/") and path != "/module/v1/health"
     }
     for path, methods in schema["paths"].items():
         for operation in methods.values():
@@ -214,8 +215,11 @@ async def test_openapi_uses_sessionid_authorize_button_for_protected_routes():
             ], path
             if path in public_paths:
                 assert "security" not in operation
-            elif path in sspanel_paths:
-                assert operation["security"] == [{"SspanelExecutorKey": []}], path
+            elif path in module_paths:
+                assert operation["security"] == [
+                    {"SspanelExecutorKey": []},
+                    {"SspanelExecutorKeyId": []},
+                ], path
             else:
                 assert operation["security"] == [{"SessionId": []}], path
 
@@ -399,11 +403,17 @@ async def test_openapi_uses_rest_http_methods():
         "/search/web/hashtags": {"get"},
         "/search/web/top": {"get"},
         "/share": {"get"},
-        "/sspanel/accounts/import-session": {"post"},
-        "/sspanel/accounts/{executor_account_id}/health": {"get"},
-        "/sspanel/jobs": {"post"},
-        "/sspanel/jobs/{job_id}": {"get"},
-        "/sspanel/jobs/{job_id}/cancel": {"post"},
+        "/module/v1/accounts/import-session": {"post"},
+        "/module/v1/accounts": {"get"},
+        "/module/v1/accounts/{executor_account_id}/health": {"get"},
+        "/module/v1/health": {"get"},
+        "/module/v1/jobs": {"post"},
+        "/module/v1/jobs/{job_id}": {"get"},
+        "/module/v1/jobs/{job_id}/cancel": {"post"},
+        "/module/v1/jobs/{job_id}/input": {"post"},
+        "/module/v1/jobs/{job_id}/pause": {"post"},
+        "/module/v1/jobs/{job_id}/resume": {"post"},
+        "/module/v1/manifest": {"get"},
         "/story": {"delete", "get"},
         "/story/archive": {"get"},
         "/story/archive/media": {"get"},
@@ -612,7 +622,7 @@ async def test_openapi_uses_human_friendly_tag_names():
         "Reels",
         "Search",
         "Share",
-        "SS-panel",
+        "SS-panel Module API",
         "Story",
         "System",
         "Track (Music)",
@@ -642,7 +652,7 @@ async def test_openapi_uses_human_friendly_tag_names():
         "IGTV (Legacy)",
         "Insights",
         "Track (Music)",
-        "SS-panel",
+        "SS-panel Module API",
         "System",
     ]
 
