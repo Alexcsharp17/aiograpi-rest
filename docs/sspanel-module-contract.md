@@ -33,6 +33,9 @@ uv run ruff check aiograpi_rest tests
   executor storage.
 - Provider errors become typed external statuses and terminal challenge/login
   states stop retries.
+- Policy capacity reservations are durable and idempotent per execution phase;
+  a managed workflow does not consume the same allowance again when it resumes
+  after content input, while warmup reserves one new unit per checkpoint.
 - Progress events are bounded summaries. Full comment, DM, and credential
   payloads must never be written to logs or panel-facing results.
 

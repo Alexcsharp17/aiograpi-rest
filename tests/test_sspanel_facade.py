@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from datetime import datetime, timezone
 
 import pytest
 from aiograpi import exceptions as aiograpi_exceptions
@@ -513,6 +514,61 @@ async def test_sspanel_policy_envelope_pauses_before_executor_action_when_limit_
     assert fake_client.calls == []
 
 
+def test_policy_capacity_is_idempotent_per_workflow_and_incremental_for_warmup(tmp_path):
+    store = sspanel.SspanelExecutorStore(str(tmp_path / "policy-reservations.sqlite3"))
+    try:
+        account = store.import_account(sspanel.ImportSessionRequest(username="policy_user"))
+        account_id = account["executorAccountId"]
+        warmup_account = store.import_account(sspanel.ImportSessionRequest(username="warmup_policy_user"))
+        warmup_account_id = warmup_account["executorAccountId"]
+        smart_request = sspanel.JobStartRequest(
+            idempotencyKey="instagram:policy:smart:1",
+            orderId=1,
+            platform="instagram",
+            actionType="instagram.comments.smart_reply",
+            quantity=1,
+            accountSelector={"mode": "specific", "accountIds": [account_id]},
+            payload={"mediaIds": ["media-1"]},
+            policyEnvelope={
+                "policyVersion": "policy-v1",
+                "actionLimits": {"instagram.comments.smart_reply": {"daily": 1}},
+            },
+        )
+        smart_job = store.create_job(smart_request)
+
+        first = store.reserve_policy_capacity(smart_request, smart_job)
+        second = store.reserve_policy_capacity(smart_request, store.find_job(smart_job["jobId"]))
+
+        assert first["reservedUnits"] == 1
+        assert first["reservations"][0]["amount"] == 1
+        assert second["reservedUnits"] == 1
+        assert second["reservations"] == []
+        assert store.usage.get(sspanel.Query().usageKey == f"{account_id}:instagram.comments.smart_reply:daily:{datetime.now(timezone.utc).strftime('%Y-%m-%d')}")["used"] == 1
+        warmup_request = sspanel.JobStartRequest(
+            idempotencyKey="instagram:policy:warmup:1",
+            orderId=2,
+            platform="instagram",
+            actionType="instagram.warmup",
+            quantity=2,
+            accountSelector={"mode": "specific", "accountIds": [warmup_account_id]},
+            payload={"actionMix": ["instagram.account.health"]},
+            policyEnvelope={
+                "policyVersion": "policy-v1",
+                "actionLimits": {"instagram.warmup": {"daily": 2}},
+            },
+        )
+        warmup_job = store.create_job(warmup_request)
+        first_warmup = store.reserve_policy_capacity(warmup_request, warmup_job)
+        store.update_job(warmup_job["jobId"], {"completedCount": 1})
+        second_warmup = store.reserve_policy_capacity(warmup_request, store.find_job(warmup_job["jobId"]))
+
+        assert first_warmup["reservedUnits"] == 1
+        assert second_warmup["reservedUnits"] == 2
+        assert second_warmup["reservations"][0]["amount"] == 1
+    finally:
+        store.close()
+
+
 @pytest.mark.asyncio
 async def test_sspanel_warmup_runs_checkpointed_action_mix_and_reports_next_run(monkeypatch):
     fake_client = FakeHealthClient()
@@ -652,6 +708,10 @@ async def test_sspanel_smart_comments_workflow_waits_for_core_content_then_publi
             action_type="instagram.comments.smart_reply",
             account_selector={"mode": "specific", "accountIds": [account_id]},
             payload={"mediaIds": ["media-1"], "scenarioRef": "funnel:general"},
+            policy_envelope={
+                "policyVersion": "instagram-smart-reply-v1",
+                "actionLimits": {"instagram.comments.smart_reply": {"daily": 1}},
+            },
         )
         job_id = created.json()["jobId"]
         awaiting = await _wait_for_terminal_or_paused(client, job_id)

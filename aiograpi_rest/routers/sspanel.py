@@ -1412,7 +1412,11 @@ class SspanelExecutorStore:
             return None
 
         now = datetime.now(timezone.utc)
-        requested_amount = 1 if request.actionType == "instagram.warmup" else request.quantity
+        current_reserved = int(job.get("policyReservedUnits", 0))
+        desired_reserved = request.quantity
+        if request.actionType == "instagram.warmup":
+            desired_reserved = min(request.quantity, int(job.get("completedCount", 0)) + 1)
+        additional_amount = max(0, desired_reserved - current_reserved)
         multiplier = self._progressive_limit_multiplier(request.policyEnvelope, job, now)
         windows: list[tuple[str, int, str, str]] = []
         if limit.hourly is not None:
@@ -1425,39 +1429,51 @@ class SspanelExecutorStore:
             return None
 
         reservations: list[dict[str, Any]] = []
-        for account_id in account_ids:
-            for window, maximum, window_start, unit in windows:
-                usage_key = f"{account_id}:{request.actionType}:{window}:{window_start}"
-                row = self.usage.get(Query().usageKey == usage_key) or {"used": 0}
-                used = int(row.get("used", 0))
-                if used + requested_amount > maximum:
-                    next_run = now + timedelta(hours=1 if unit == "hour" else 24)
-                    return {
-                        "code": "POLICY_LIMIT_REACHED",
-                        "message": f"{window} policy limit reached for {request.actionType}",
-                        "nextRunAt": next_run.isoformat().replace("+00:00", "Z"),
-                    }
-                reservations.append({
-                    "usageKey": usage_key,
-                    "accountId": account_id,
-                    "actionType": request.actionType,
-                    "window": window,
-                    "windowStart": window_start,
-                    "amount": requested_amount,
-                    "maximum": maximum,
-                })
+        with self.db.transaction():
+            if additional_amount > 0:
+                for account_id in account_ids:
+                    for window, maximum, window_start, unit in windows:
+                        usage_key = f"{account_id}:{request.actionType}:{window}:{window_start}"
+                        row = self.usage.get(Query().usageKey == usage_key) or {"used": 0}
+                        used = int(row.get("used", 0))
+                        if used + additional_amount > maximum:
+                            next_run = now + timedelta(hours=1 if unit == "hour" else 24)
+                            return {
+                                "code": "POLICY_LIMIT_REACHED",
+                                "message": f"{window} policy limit reached for {request.actionType}",
+                                "nextRunAt": next_run.isoformat().replace("+00:00", "Z"),
+                            }
+                        reservations.append({
+                            "usageKey": usage_key,
+                            "accountId": account_id,
+                            "actionType": request.actionType,
+                            "window": window,
+                            "windowStart": window_start,
+                            "amount": additional_amount,
+                            "maximum": maximum,
+                        })
 
-        for reservation in reservations:
-            self.usage.upsert(
-                {
-                    **reservation,
-                    "used": int((self.usage.get(Query().usageKey == reservation["usageKey"]) or {}).get("used", 0))
-                    + requested_amount,
-                    "updatedAt": _utc_now(),
-                },
-                Query().usageKey == reservation["usageKey"],
-            )
-        return {"reservations": reservations}
+                for reservation in reservations:
+                    predicate = Query().usageKey == reservation["usageKey"]
+                    existing = self.usage.get(predicate)
+                    updated = {
+                        **(existing or {}),
+                        **reservation,
+                        "used": int((existing or {}).get("used", 0)) + additional_amount,
+                        "updatedAt": _utc_now(),
+                    }
+                    if existing:
+                        self.usage.update_in_transaction(updated, predicate)
+                    else:
+                        self.usage.insert_in_transaction(updated)
+
+            if desired_reserved > current_reserved:
+                self.jobs.update_in_transaction(
+                    {"policyReservedUnits": desired_reserved, "updatedAt": _utc_now()},
+                    Query().jobId == job["jobId"],
+                )
+
+        return {"reservedUnits": desired_reserved, "reservations": reservations}
 
     @staticmethod
     def _effective_limit(maximum: int, multiplier: float) -> int:
