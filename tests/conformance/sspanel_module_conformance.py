@@ -19,6 +19,7 @@ async def assert_sspanel_module_conformance(client: Any, api_key: str) -> None:
     assert manifest["moduleId"]
     assert "instagram" == manifest["platform"]
     assert manifest["contractVersions"]
+    assert isinstance(manifest.get("features", []), list)
     assert manifest["capabilities"]
     assert {
         "instagram.account.health",

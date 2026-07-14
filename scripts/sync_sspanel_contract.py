@@ -10,6 +10,7 @@ from typing import Any
 
 FIELDS = (
     "contractVersions",
+    "moduleFeatures",
     "platforms",
     "jobStatuses",
     "eventTypes",

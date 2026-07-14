@@ -36,6 +36,7 @@ MODULE_ID = "instagram-executor"
 CONTRACT_PATH = Path(__file__).resolve().parents[1] / "sspanel_contract.json"
 CONTRACT_FIXTURE = json.loads(CONTRACT_PATH.read_text())
 CONTRACT_VERSIONS = tuple(CONTRACT_FIXTURE["contractVersions"])
+CONTRACT_FEATURES = tuple(CONTRACT_FIXTURE.get("moduleFeatures", []))
 IMPLEMENTED_CAPABILITIES = frozenset(CONTRACT_FIXTURE["instagramImplementedCapabilities"])
 IMPLEMENTED_WORKFLOW_TYPES = tuple(CONTRACT_FIXTURE.get("workflowTypes", []))
 
@@ -749,6 +750,7 @@ class ModuleManifestResponse(BaseModel):
     moduleId: str
     platform: Platform
     contractVersions: list[str]
+    features: list[str]
     capabilities: list[ActionType]
     workflowTypes: list[str]
     supportsPolling: bool
@@ -1733,14 +1735,20 @@ def require_sspanel_scope(scope: str):
     dependencies=[Depends(require_sspanel_scope("manifest:read"))],
 )
 async def get_module_manifest() -> ModuleManifestResponse:
+    supports_callbacks = bool(os.getenv("SSPANEL_CALLBACK_SECRET") and os.getenv("SSPANEL_CALLBACK_URL"))
+    features = [
+        feature for feature in CONTRACT_FEATURES
+        if feature != "callbacks.v1" or supports_callbacks
+    ]
     return ModuleManifestResponse(
         moduleId=MODULE_ID,
         platform="instagram",
         contractVersions=list(CONTRACT_VERSIONS),
+        features=features,
         capabilities=sorted(IMPLEMENTED_CAPABILITIES),
         workflowTypes=list(IMPLEMENTED_WORKFLOW_TYPES),
         supportsPolling=True,
-        supportsCallbacks=bool(os.getenv("SSPANEL_CALLBACK_SECRET") and os.getenv("SSPANEL_CALLBACK_URL")),
+        supportsCallbacks=supports_callbacks,
     )
 
 

@@ -706,6 +706,13 @@ async def test_module_manifest_advertises_only_implemented_capabilities():
         "moduleId": "instagram-executor",
         "platform": "instagram",
         "contractVersions": ["1.0"],
+        "features": [
+            "event-sequence.v1",
+            "managed-workflows.v1",
+            "pause-resume.v1",
+            "provider-retry-confirmation.v1",
+            "workflow-input.v1",
+        ],
         "capabilities": [
             "instagram.account.health",
             "instagram.comments.delete",
