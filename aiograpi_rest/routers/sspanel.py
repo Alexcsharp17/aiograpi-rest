@@ -894,6 +894,11 @@ class ImportSessionResponse(BaseModel):
     status: str
 
 
+class DeleteAccountResponse(BaseModel):
+    executorAccountId: str
+    deleted: bool
+
+
 class SspanelExecutorStore:
     def __init__(self, path: str):
         db_path = Path(path)
@@ -1517,6 +1522,26 @@ class SspanelExecutorStore:
     def get_account(self, account_id: str) -> Optional[dict[str, Any]]:
         rows = self.accounts.search(Query().executorAccountId == account_id)
         return rows[0] if rows else None
+
+    def delete_account(self, account_id: str) -> dict[str, Any]:
+        account = self.get_account(account_id)
+        if not account:
+            raise HTTPException(status_code=404, detail="SS-panel executor account not found")
+
+        for job in self.jobs.all():
+            if job.get("status") not in ACTIVE_WRITE_STATUSES:
+                continue
+            selector = job.get("accountSelector") or {}
+            selected_ids = set(selector.get("accountIds") or [])
+            assigned_ids = set(job.get("assignedAccountIds") or [])
+            if account_id in selected_ids or account_id in assigned_ids:
+                raise HTTPException(status_code=409, detail="Instagram account has active jobs")
+
+        with self.db.transaction():
+            self.accounts.remove_in_transaction(Query().executorAccountId == account_id)
+            self.usage.remove_in_transaction(Query().accountId == account_id)
+        logger.info("Deleted SS-panel Instagram account: %s", {"executorAccountId": account_id, "deleted": True})
+        return {"executorAccountId": account_id, "deleted": True}
 
     def resolve_specific_account(self, request: JobStartRequest) -> Optional[dict[str, Any]]:
         if request.accountSelector.mode != "specific":
@@ -2961,6 +2986,19 @@ async def import_session(
 ) -> ImportSessionResponse:
     account = store.import_account(request)
     return ImportSessionResponse(executorAccountId=account["executorAccountId"], status=account["status"])
+
+
+@router.delete(
+    "/accounts/{executor_account_id}",
+    response_model=DeleteAccountResponse,
+    dependencies=[Depends(require_sspanel_scope("accounts:write"))],
+)
+async def delete_account(
+    executor_account_id: str,
+    store: SspanelExecutorStore = Depends(get_store),
+) -> DeleteAccountResponse:
+    result = store.delete_account(executor_account_id)
+    return DeleteAccountResponse(**result)
 
 
 @router.get(

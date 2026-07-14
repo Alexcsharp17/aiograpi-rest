@@ -1020,6 +1020,76 @@ async def test_sspanel_account_import_does_not_log_sensitive_values(caplog):
     assert "nested-session-secret" not in logs
 
 
+@pytest.mark.asyncio
+async def test_sspanel_account_delete_route_is_idempotent_for_missing_remote_account():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        imported = await client.post(
+            "/module/v1/accounts/import-session",
+            headers={"X-SSPanel-Executor-Key": "executor-secret"},
+            json={"username": "delete-route-user", "sessionid": "delete-route-session"},
+        )
+        account_id = imported.json()["executorAccountId"]
+        deleted = await client.delete(
+            f"/module/v1/accounts/{account_id}",
+            headers={"X-SSPanel-Executor-Key": "executor-secret"},
+        )
+        repeated = await client.delete(
+            f"/module/v1/accounts/{account_id}",
+            headers={"X-SSPanel-Executor-Key": "executor-secret"},
+        )
+
+    assert imported.status_code == 200
+    assert deleted.status_code == 200
+    assert deleted.json() == {"executorAccountId": account_id, "deleted": True}
+    assert repeated.status_code == 404
+
+
+def test_executor_account_delete_removes_encrypted_account_and_usage(tmp_path):
+    store = sspanel.SspanelExecutorStore(str(tmp_path / "account-delete.sqlite3"))
+    try:
+        account = store.import_account(sspanel.ImportSessionRequest(
+            username="delete_user",
+            sessionid="raw-session-secret",
+            proxy="http://proxy-user:proxy-pass@example.test:8000",
+        ))
+        store.usage.insert({
+            "usageKey": "ig_acc_usage:daily",
+            "accountId": account["executorAccountId"],
+            "used": 3,
+        })
+
+        result = store.delete_account(account["executorAccountId"])
+
+        assert result == {"executorAccountId": account["executorAccountId"], "deleted": True}
+        assert store.get_account(account["executorAccountId"]) is None
+        assert store.usage.all() == []
+    finally:
+        store.close()
+
+
+def test_executor_account_delete_blocks_active_assigned_jobs(tmp_path):
+    store = sspanel.SspanelExecutorStore(str(tmp_path / "account-delete-active.sqlite3"))
+    try:
+        account_id = store.import_account(sspanel.ImportSessionRequest(username="active_user"))["executorAccountId"]
+        request = sspanel.JobStartRequest(
+            idempotencyKey="instagram:account-delete:active",
+            orderId=1,
+            platform="instagram",
+            actionType="instagram.comments.reply",
+            quantity=1,
+            accountSelector={"mode": "specific", "accountIds": [account_id]},
+            payload={"mediaId": "media-1", "text": "reply"},
+        )
+        store.create_job(request)
+
+        with pytest.raises(HTTPException) as error:
+            store.delete_account(account_id)
+        assert error.value.status_code == 409
+        assert store.get_account(account_id) is not None
+    finally:
+        store.close()
+
+
 def test_executor_account_write_lease_blocks_until_terminal_job(tmp_path):
     store = sspanel.SspanelExecutorStore(str(tmp_path / "leases.json"))
     try:

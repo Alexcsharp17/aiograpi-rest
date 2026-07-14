@@ -405,6 +405,7 @@ async def test_openapi_uses_rest_http_methods():
         "/share": {"get"},
         "/module/v1/accounts/import-session": {"post"},
         "/module/v1/accounts": {"get"},
+        "/module/v1/accounts/{executor_account_id}": {"delete"},
         "/module/v1/accounts/{executor_account_id}/health": {"get"},
         "/module/v1/health": {"get"},
         "/module/v1/jobs": {"post"},

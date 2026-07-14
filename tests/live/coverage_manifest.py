@@ -94,6 +94,7 @@ UPLOAD_MUTATIONS = {
 
 SSPANEL_MUTATIONS = {
     ("POST", "/module/v1/accounts/import-session"): "GET /module/v1/accounts/{executor_account_id}/health",
+    ("DELETE", "/module/v1/accounts/{executor_account_id}"): "GET /module/v1/accounts/{executor_account_id}/health returns 404",
     ("POST", "/module/v1/jobs"): "GET /module/v1/jobs/{job_id}",
     ("POST", "/module/v1/jobs/{job_id}/cancel"): "GET /module/v1/jobs/{job_id}",
     ("POST", "/module/v1/jobs/{job_id}/input"): "GET /module/v1/jobs/{job_id}",

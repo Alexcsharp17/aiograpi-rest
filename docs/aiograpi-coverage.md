@@ -232,6 +232,7 @@ the installed `aiograpi.Client` class and the local FastAPI router implementatio
 | `PATCH /media/seen` | `media_seen` |
 | `GET /module/v1/accounts` | - |
 | `POST /module/v1/accounts/import-session` | - |
+| `DELETE /module/v1/accounts/{executor_account_id}` | `get_settings` |
 | `GET /module/v1/accounts/{executor_account_id}/health` | - |
 | `GET /module/v1/health` | - |
 | `POST /module/v1/jobs` | - |
@@ -537,7 +538,7 @@ the installed `aiograpi.Client` class and the local FastAPI router implementatio
 | `get_notes(self) -> List[aiograpi.types.Note]` | `note` | `GET /note`<br>`GET /note/text`<br>`GET /notes` | `exposed` | used by at least one public REST route |
 | `get_prefill_candidates(self, login: bool = False) -> Dict` | `auth` | - | `internal` | low-level aiograpi helper or unsafe generic surface |
 | `get_reels_tray_feed(self, reason: Literal['cold_start', 'pull_to_refresh'] = 'pull_to_refresh') -> Dict` | `auth` | - | `internal` | low-level aiograpi helper or unsafe generic surface |
-| `get_settings(self) -> Dict` | `auth` | `GET /auth/settings` | `exposed` | used by at least one public REST route |
+| `get_settings(self) -> Dict` | `auth` | `GET /auth/settings`<br>`DELETE /module/v1/accounts/{executor_account_id}` | `exposed` | used by at least one public REST route |
 | `get_signup_config(self) -> dict` | `signup` | - | `internal` | low-level aiograpi helper or unsafe generic surface |
 | `get_timeline_feed(self, reason: Literal['cold_start_fetch', 'warm_start_fetch', 'pagination', 'pull_to_refresh', 'auto_refresh'] = 'pull_to_refresh', max_id: str = None, seen_posts: Union[str, Iterable[str], NoneType] = None, feed_view_info: Union[str, List[Dict[str, Any]], NoneType] = None) -> Dict` | `auth` | `GET /account/feed/timeline` | `exposed` | used by at least one public REST route |
 | `graphql_request(self, data=None, params=None, headers=None, return_json=True, retries_count=1, retries_timeout=2)` | `graphql` | - | `internal` | low-level aiograpi helper or unsafe generic surface |

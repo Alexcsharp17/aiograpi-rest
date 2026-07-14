@@ -308,6 +308,22 @@ class SQLiteJsonTable:
             changed += 1
         return changed
 
+    def remove(self, predicate: Predicate) -> int:
+        with self.store.transaction():
+            return self.remove_in_transaction(predicate)
+
+    def remove_in_transaction(self, predicate: Predicate) -> int:
+        removed = 0
+        for row_id, row in self.rows_with_ids():
+            if not predicate(row):
+                continue
+            self.store.connection.execute(
+                "DELETE FROM executor_rows WHERE id = ?",
+                (row_id,),
+            )
+            removed += 1
+        return removed
+
     def upsert(self, row: dict[str, Any], predicate: Predicate) -> None:
         existing = self.get(predicate)
         if existing:
