@@ -26,47 +26,135 @@ class StorageConfigurationError(RuntimeError):
     """Raised when encrypted executor storage is not configured safely."""
 
 
-def _encryption_key() -> bytes:
-    encoded = os.getenv("SSPANEL_EXECUTOR_ENCRYPTION_KEY", "").strip()
-    if not encoded:
-        if os.getenv("SSPANEL_EXECUTOR_ALLOW_INSECURE_DEV_STORAGE", "").lower() == "true":
-            return hashlib.sha256(b"sspanel-executor-insecure-development-key").digest()
-        raise StorageConfigurationError(
-            "SSPANEL_EXECUTOR_ENCRYPTION_KEY must be configured for executor storage"
-        )
-
+def _decode_encryption_key(encoded: object, label: str) -> bytes:
+    if not isinstance(encoded, str) or not encoded.strip():
+        raise StorageConfigurationError(f"{label} must be configured")
     try:
-        padding = "=" * (-len(encoded) % 4)
-        key = base64.urlsafe_b64decode((encoded + padding).encode("ascii"))
+        value = encoded.strip()
+        padding = "=" * (-len(value) % 4)
+        key = base64.urlsafe_b64decode((value + padding).encode("ascii"))
     except (ValueError, UnicodeError) as error:
-        raise StorageConfigurationError("SSPANEL_EXECUTOR_ENCRYPTION_KEY must be urlsafe base64") from error
+        raise StorageConfigurationError(f"{label} must be urlsafe base64") from error
     if len(key) != 32:
-        raise StorageConfigurationError("SSPANEL_EXECUTOR_ENCRYPTION_KEY must decode to 32 bytes")
+        raise StorageConfigurationError(f"{label} must decode to 32 bytes")
     return key
 
 
+def _encryption_keyring() -> tuple[dict[str, bytes], str]:
+    """Resolve the active storage key and optional previous rotation keys."""
+    configured = os.getenv("SSPANEL_EXECUTOR_ENCRYPTION_KEYS", "").strip()
+    if configured:
+        try:
+            parsed = json.loads(configured)
+        except json.JSONDecodeError as error:
+            raise StorageConfigurationError(
+                "SSPANEL_EXECUTOR_ENCRYPTION_KEYS must be valid JSON"
+            ) from error
+
+        entries = parsed.get("keys") if isinstance(parsed, dict) else parsed
+        if not isinstance(entries, list) or not entries:
+            raise StorageConfigurationError(
+                "SSPANEL_EXECUTOR_ENCRYPTION_KEYS must be a non-empty JSON list"
+            )
+
+        keys: dict[str, bytes] = {}
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            key_id = entry.get("id")
+            if not isinstance(key_id, str) or not key_id.strip():
+                continue
+            key_id = key_id.strip()
+            if key_id in keys:
+                raise StorageConfigurationError(
+                    "SSPANEL_EXECUTOR_ENCRYPTION_KEYS contains duplicate key ids"
+                )
+            keys[key_id] = _decode_encryption_key(
+                entry.get("key"),
+                f"SSPANEL_EXECUTOR_ENCRYPTION_KEYS[{key_id}].key",
+            )
+
+        if not keys:
+            raise StorageConfigurationError(
+                "SSPANEL_EXECUTOR_ENCRYPTION_KEYS does not contain a valid key"
+            )
+        active_id = os.getenv("SSPANEL_EXECUTOR_ACTIVE_ENCRYPTION_KEY_ID", "").strip()
+        if not active_id:
+            active_id = next(iter(keys))
+        if active_id not in keys:
+            raise StorageConfigurationError(
+                "SSPANEL_EXECUTOR_ACTIVE_ENCRYPTION_KEY_ID must reference a configured key"
+            )
+        return keys, active_id
+
+    encoded = os.getenv("SSPANEL_EXECUTOR_ENCRYPTION_KEY", "").strip()
+    if encoded:
+        return {"legacy": _decode_encryption_key(encoded, "SSPANEL_EXECUTOR_ENCRYPTION_KEY")}, "legacy"
+    if os.getenv("SSPANEL_EXECUTOR_ALLOW_INSECURE_DEV_STORAGE", "").lower() == "true":
+        return {
+            "insecure-dev": hashlib.sha256(b"sspanel-executor-insecure-development-key").digest()
+        }, "insecure-dev"
+    raise StorageConfigurationError(
+        "SSPANEL_EXECUTOR_ENCRYPTION_KEY or SSPANEL_EXECUTOR_ENCRYPTION_KEYS must be configured for executor storage"
+    )
+
+
 class _JsonCodec:
-    def __init__(self, key: bytes):
-        self._aes = AESGCM(key)
+    def __init__(self, keys: dict[str, bytes], active_key_id: str):
+        self._keys = {key_id: AESGCM(key) for key_id, key in keys.items()}
+        self.active_key_id = active_key_id
 
     def encode(self, value: dict[str, Any]) -> str:
         nonce = os.urandom(12)
         plaintext = json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
-        ciphertext = self._aes.encrypt(nonce, plaintext, None)
-        return "v1:" + base64.urlsafe_b64encode(nonce + ciphertext).decode("ascii")
+        ciphertext = self._keys[self.active_key_id].encrypt(nonce, plaintext, None)
+        encoded = base64.urlsafe_b64encode(nonce + ciphertext).decode("ascii")
+        return f"v2:{self.active_key_id}:{encoded}"
+
+    def decode_with_metadata(self, value: str) -> tuple[dict[str, Any], str, str]:
+        if value.startswith("v2:"):
+            try:
+                _, key_id, encoded = value.split(":", 2)
+            except ValueError as error:
+                raise StorageConfigurationError(
+                    "Executor storage payload has an invalid encryption envelope"
+                ) from error
+            candidates = [(key_id, self._keys.get(key_id))]
+            version = "v2"
+        elif value.startswith("v1:"):
+            encoded = value[3:]
+            candidates = [(key_id, codec) for key_id, codec in self._keys.items()]
+            version = "v1"
+        else:
+            raise StorageConfigurationError("Executor storage contains an unsupported encryption version")
+
+        if not candidates or all(codec is None for _, codec in candidates):
+            raise StorageConfigurationError("Executor storage payload references an unavailable encryption key")
+
+        last_error: Optional[Exception] = None
+        for key_id, codec in candidates:
+            if codec is None:
+                continue
+            try:
+                raw = base64.urlsafe_b64decode(encoded.encode("ascii"))
+                if len(raw) <= 12:
+                    raise ValueError("encrypted payload is too short")
+                plaintext = codec.decrypt(raw[:12], raw[12:], None)
+                decoded = json.loads(plaintext.decode("utf-8"))
+                if not isinstance(decoded, dict):
+                    raise StorageConfigurationError("Executor storage payload must be a JSON object")
+                return decoded, key_id, version
+            except (binascii.Error, InvalidTag, ValueError, UnicodeError, json.JSONDecodeError) as error:
+                last_error = error
+
+        raise StorageConfigurationError("Executor storage payload could not be decrypted") from last_error
 
     def decode(self, value: str) -> dict[str, Any]:
-        if not value.startswith("v1:"):
-            raise StorageConfigurationError("Executor storage contains an unsupported encryption version")
-        try:
-            raw = base64.urlsafe_b64decode(value[3:].encode("ascii"))
-            plaintext = self._aes.decrypt(raw[:12], raw[12:], None)
-            decoded = json.loads(plaintext.decode("utf-8"))
-        except (binascii.Error, InvalidTag, ValueError, UnicodeError, json.JSONDecodeError) as error:
-            raise StorageConfigurationError("Executor storage payload could not be decrypted") from error
-        if not isinstance(decoded, dict):
-            raise StorageConfigurationError("Executor storage payload must be a JSON object")
+        decoded, _, _ = self.decode_with_metadata(value)
         return decoded
+
+    def needs_rewrap(self, value: str) -> bool:
+        return not value.startswith(f"v2:{self.active_key_id}:")
 
 
 class _Field:
@@ -187,7 +275,8 @@ class SQLiteJsonStore:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
-        self.codec = _JsonCodec(_encryption_key())
+        encryption_keys, active_key_id = _encryption_keyring()
+        self.codec = _JsonCodec(encryption_keys, active_key_id)
         self._migrate_legacy_json()
         self.connection = sqlite3.connect(str(self.path), timeout=30, check_same_thread=False)
         self.connection.execute("PRAGMA journal_mode = WAL")
@@ -285,7 +374,19 @@ class SQLiteJsonStore:
                     continue
 
     def _validate_existing_payloads(self) -> None:
-        """Fail during startup when the configured key cannot read persisted rows."""
-        rows = self.connection.execute("SELECT payload FROM executor_rows").fetchall()
-        for (payload,) in rows:
-            self.decode_payload(payload)
+        """Validate rows and re-wrap them with the active key during rotation."""
+        rows = self.connection.execute("SELECT id, payload FROM executor_rows").fetchall()
+        rewrapped: list[tuple[int, str]] = []
+        for row_id, payload in rows:
+            decoded, _, _ = self.codec.decode_with_metadata(payload)
+            if self.codec.needs_rewrap(payload):
+                rewrapped.append((int(row_id), self.codec.encode(decoded)))
+
+        if not rewrapped:
+            return
+        with self.transaction():
+            for row_id, payload in rewrapped:
+                self.connection.execute(
+                    "UPDATE executor_rows SET payload = ? WHERE id = ?",
+                    (payload, row_id),
+                )

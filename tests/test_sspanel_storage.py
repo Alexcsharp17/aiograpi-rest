@@ -1,10 +1,15 @@
+import base64
 import json
+import os
+import sqlite3
 
 import pytest
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from aiograpi_rest.sspanel_storage import SQLiteJsonStore, StorageConfigurationError
 
 KEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+ROTATED_KEY = "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="
 
 
 def test_storage_encrypts_rows_and_reopens_them(tmp_path, monkeypatch):
@@ -32,6 +37,8 @@ def test_storage_encrypts_rows_and_reopens_them(tmp_path, monkeypatch):
 
 def test_storage_requires_an_explicit_key_outside_dev_mode(tmp_path, monkeypatch):
     monkeypatch.delenv("SSPANEL_EXECUTOR_ENCRYPTION_KEY", raising=False)
+    monkeypatch.delenv("SSPANEL_EXECUTOR_ENCRYPTION_KEYS", raising=False)
+    monkeypatch.delenv("SSPANEL_EXECUTOR_ACTIVE_ENCRYPTION_KEY_ID", raising=False)
     monkeypatch.delenv("SSPANEL_EXECUTOR_ALLOW_INSECURE_DEV_STORAGE", raising=False)
 
     with pytest.raises(StorageConfigurationError, match="ENCRYPTION_KEY"):
@@ -48,6 +55,74 @@ def test_storage_reports_wrong_key_as_configuration_error(tmp_path, monkeypatch)
     monkeypatch.setenv("SSPANEL_EXECUTOR_ENCRYPTION_KEY", "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=")
     with pytest.raises(StorageConfigurationError, match="could not be decrypted"):
         SQLiteJsonStore(str(path))
+
+
+def test_storage_rewraps_rows_when_active_encryption_key_rotates(tmp_path, monkeypatch):
+    path = tmp_path / "executor.sqlite3"
+    monkeypatch.setenv("SSPANEL_EXECUTOR_ENCRYPTION_KEY", KEY)
+    first = SQLiteJsonStore(str(path))
+    first.table("jobs").insert({
+        "jobId": "job-rotation",
+        "idempotencyKey": "idem-rotation",
+        "payload": {"sessionid": "rotation-secret"},
+    })
+    first.close()
+
+    monkeypatch.delenv("SSPANEL_EXECUTOR_ENCRYPTION_KEY", raising=False)
+    monkeypatch.setenv(
+        "SSPANEL_EXECUTOR_ENCRYPTION_KEYS",
+        json.dumps([
+            {"id": "active-2026", "key": ROTATED_KEY},
+            {"id": "legacy", "key": KEY},
+        ]),
+    )
+    monkeypatch.setenv("SSPANEL_EXECUTOR_ACTIVE_ENCRYPTION_KEY_ID", "active-2026")
+    rotated = SQLiteJsonStore(str(path))
+    try:
+        assert rotated.table("jobs").get(lambda row: row.get("jobId") == "job-rotation")["payload"]["sessionid"] == "rotation-secret"
+    finally:
+        rotated.close()
+
+    assert b"v2:active-2026:" in path.read_bytes()
+
+    monkeypatch.setenv(
+        "SSPANEL_EXECUTOR_ENCRYPTION_KEYS",
+        json.dumps([{"id": "active-2026", "key": ROTATED_KEY}]),
+    )
+    reopened = SQLiteJsonStore(str(path))
+    try:
+        assert reopened.table("jobs").get(lambda row: row.get("jobId") == "job-rotation")["payload"]["sessionid"] == "rotation-secret"
+    finally:
+        reopened.close()
+
+
+def test_storage_reads_legacy_v1_rows_and_rewraps_them(tmp_path, monkeypatch):
+    path = tmp_path / "executor.sqlite3"
+    monkeypatch.setenv("SSPANEL_EXECUTOR_ENCRYPTION_KEY", KEY)
+    empty = SQLiteJsonStore(str(path))
+    empty.close()
+
+    key = base64.urlsafe_b64decode(KEY)
+    nonce = os.urandom(12)
+    plaintext = json.dumps({"jobId": "legacy-v1", "idempotencyKey": "legacy-idem"}).encode("utf-8")
+    ciphertext = AESGCM(key).encrypt(nonce, plaintext, None)
+    legacy_payload = "v1:" + base64.urlsafe_b64encode(nonce + ciphertext).decode("ascii")
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute(
+            "INSERT INTO executor_rows(table_name, row_key, secondary_key, payload) VALUES (?, ?, ?, ?)",
+            ("jobs", "legacy-v1", "legacy-idem", legacy_payload),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    rotated = SQLiteJsonStore(str(path))
+    try:
+        assert rotated.table("jobs").get(lambda row: row.get("jobId") == "legacy-v1") is not None
+    finally:
+        rotated.close()
+    assert b"v2:legacy:" in path.read_bytes()
 
 
 def test_storage_migrates_legacy_tinydb_json_to_encrypted_sqlite(tmp_path, monkeypatch):

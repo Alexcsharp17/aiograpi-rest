@@ -17,6 +17,12 @@ This checkout is used by SS-panel as `modules/aiograpi-rest` on branch
   Set `SSPANEL_EXECUTOR_ENCRYPTION_KEY` to a urlsafe-base64 encoded 32-byte key;
   the service refuses to start without it unless the explicit development-only
   `SSPANEL_EXECUTOR_ALLOW_INSECURE_DEV_STORAGE=true` flag is set.
+- Encryption keys can be rotated without losing access to existing rows. Set
+  `SSPANEL_EXECUTOR_ENCRYPTION_KEYS` to a JSON list of `{id, key}` entries and
+  set `SSPANEL_EXECUTOR_ACTIVE_ENCRYPTION_KEY_ID` to the new key ID. The
+  executor reads active and previous keys during startup, then re-wraps all
+  rows with the active key. Remove the previous key only after startup has
+  completed successfully and the encrypted database backup is verified.
 - The canonical schema is `modules/ss-toolkit/contracts/external-executor.schema.json`.
   Regenerate the Python fixture with `python scripts/sync_sspanel_contract.py`.
 
