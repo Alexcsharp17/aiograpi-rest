@@ -213,6 +213,13 @@ WRITE_ACTIONS = {
     "instagram.dm.reply",
 }
 ACTIVE_WRITE_STATUSES = {"queued", "running", "paused", "rate_limited"}
+UNAVAILABLE_ACCOUNT_STATUSES = {
+    "banned_or_locked",
+    "challenge_required",
+    "session_expired",
+    "missing",
+    "deleted",
+}
 TERMINAL_STATUSES = {
     "completed",
     "partially_completed",
@@ -598,6 +605,26 @@ class AccountSelector(BaseModel):
     mode: Literal["system", "specific"]
     accountIds: Optional[list[str]] = None
     constraints: Optional[dict[str, Any]] = None
+
+    @model_validator(mode="after")
+    def validate_selection(self) -> "AccountSelector":
+        if self.mode == "specific" and not self.accountIds:
+            raise ValueError("specific accountSelector requires accountIds")
+        constraints = self.constraints or {}
+        allowed = constraints.get("allowedExecutorAccountIds")
+        if allowed is not None and (
+            not isinstance(allowed, list)
+            or not allowed
+            or any(not isinstance(account_id, str) or not account_id.strip() for account_id in allowed)
+        ):
+            raise ValueError("allowedExecutorAccountIds must be a non-empty list of strings")
+        excluded = constraints.get("excludeExecutorAccountIds")
+        if excluded is not None and (
+            not isinstance(excluded, list)
+            or any(not isinstance(account_id, str) or not account_id.strip() for account_id in excluded)
+        ):
+            raise ValueError("excludeExecutorAccountIds must be a list of strings")
+        return self
 
 
 class ExecutorActivityWindow(BaseModel):
@@ -1562,6 +1589,34 @@ class SspanelExecutorStore:
                 continue
             try:
                 request = request_from_job(job)
+                original_selector = job.get("accountSelector") or {}
+                if original_selector.get("mode") == "system" and not job.get("assignedAccountIds"):
+                    account = self.resolve_system_account(request, job_id=job["jobId"])
+                    if not account:
+                        updates = {
+                            "errorCode": "NO_EXECUTOR_ACCOUNT_AVAILABLE",
+                            "errorMessage": "No available Instagram executor account matches the system selector",
+                        }
+                        if self.has_system_account_pool(request):
+                            self.jobs.update(
+                                {**updates, "nextRunAt": _utc_after_seconds(_lease_ttl_seconds())},
+                                Query().jobId == job["jobId"],
+                            )
+                        else:
+                            self.update_job(
+                                job["jobId"],
+                                {**updates, "status": "failed", "nextRunAt": None},
+                            )
+                        continue
+                    self.jobs.update(
+                        {
+                            "assignedAccountIds": [account["executorAccountId"]],
+                            "lastSelectedAt": _utc_now(),
+                        },
+                        Query().jobId == job["jobId"],
+                    )
+                    job = self.find_job(job["jobId"]) or job
+                    request = request_from_job(job)
                 if request.actionType in WRITE_ACTIONS and request.accountSelector.mode == "specific":
                     self.acquire_account_leases(
                         sorted(set(request.accountSelector.accountIds or [])),
@@ -1722,6 +1777,90 @@ class SspanelExecutorStore:
             raise HTTPException(status_code=404, detail="SS-panel executor account not found")
         return account
 
+    def resolve_system_account(
+        self,
+        request: JobStartRequest,
+        *,
+        job_id: Optional[str] = None,
+    ) -> Optional[dict[str, Any]]:
+        """Select one available account from the panel-approved system pool."""
+        if request.accountSelector.mode != "system":
+            return None
+
+        constraints = request.accountSelector.constraints or {}
+        allowed = constraints.get("allowedExecutorAccountIds")
+        if allowed is not None:
+            if (
+                not isinstance(allowed, list)
+                or not allowed
+                or any(not isinstance(account_id, str) or not account_id.strip() for account_id in allowed)
+            ):
+                raise HTTPException(
+                    status_code=422,
+                    detail="system accountSelector allowedExecutorAccountIds must be a non-empty list",
+                )
+            allowed_ids = {account_id.strip() for account_id in allowed}
+        else:
+            allowed_ids = None
+
+        excluded = constraints.get("excludeExecutorAccountIds", [])
+        if not isinstance(excluded, list) or any(
+            not isinstance(account_id, str) or not account_id.strip() for account_id in excluded
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail="system accountSelector excludeExecutorAccountIds must be a list of strings",
+            )
+        excluded_ids = {account_id.strip() for account_id in excluded}
+
+        candidates = []
+        for account in self.accounts.all():
+            account_id = account.get("executorAccountId")
+            if not isinstance(account_id, str) or not account_id:
+                continue
+            if allowed_ids is not None and account_id not in allowed_ids:
+                continue
+            if account_id in excluded_ids:
+                continue
+            if account.get("status") in UNAVAILABLE_ACCOUNT_STATUSES:
+                continue
+            lease_job_id = account.get("leaseJobId")
+            if lease_job_id and lease_job_id != job_id and _is_active_lease(account.get("leaseExpiresAt")):
+                continue
+            candidates.append(account)
+
+        if not candidates:
+            return None
+
+        candidates.sort(
+            key=lambda account: (
+                account.get("lastSelectedAt") or account.get("updatedAt") or "",
+                str(account.get("executorAccountId")),
+            ),
+        )
+        return candidates[0]
+
+    def has_system_account_pool(self, request: JobStartRequest) -> bool:
+        """Return whether the selector contains an account that is not blocked."""
+        constraints = request.accountSelector.constraints or {}
+        allowed = constraints.get("allowedExecutorAccountIds")
+        allowed_ids = {account_id.strip() for account_id in allowed} if isinstance(allowed, list) else None
+        excluded = constraints.get("excludeExecutorAccountIds", [])
+        excluded_ids = {account_id.strip() for account_id in excluded} if isinstance(excluded, list) else set()
+        return any(
+            isinstance(account.get("executorAccountId"), str)
+            and (allowed_ids is None or account["executorAccountId"] in allowed_ids)
+            and account["executorAccountId"] not in excluded_ids
+            and account.get("status") not in UNAVAILABLE_ACCOUNT_STATUSES
+            for account in self.accounts.all()
+        )
+
+    def resolve_account(self, request: JobStartRequest) -> Optional[dict[str, Any]]:
+        """Resolve a persisted specific assignment or a system-selected account."""
+        if request.accountSelector.mode == "specific":
+            return self.resolve_specific_account(request)
+        return self.resolve_system_account(request)
+
     def _assert_write_capacity(
         self,
         request: JobStartRequest,
@@ -1789,6 +1928,18 @@ class SspanelExecutorStore:
 
 
 def request_from_job(job: dict[str, Any]) -> JobStartRequest:
+    account_selector = job.get("accountSelector") or {"mode": "system"}
+    assigned_account_ids = [
+        account_id
+        for account_id in (job.get("assignedAccountIds") or [])
+        if isinstance(account_id, str) and account_id
+    ]
+    if assigned_account_ids:
+        account_selector = {
+            **account_selector,
+            "mode": "specific",
+            "accountIds": assigned_account_ids,
+        }
     return JobStartRequest.model_validate(
         {
             "idempotencyKey": job["idempotencyKey"],
@@ -1796,7 +1947,7 @@ def request_from_job(job: dict[str, Any]) -> JobStartRequest:
             "platform": job["platform"],
             "actionType": job["actionType"],
             "quantity": job["quantity"],
-            "accountSelector": job.get("accountSelector") or {"mode": "system"},
+            "accountSelector": account_selector,
             "payload": job.get("payload") or {},
             "policyEnvelope": job.get("policyEnvelope"),
             "callbackUrl": job.get("callbackUrl"),
@@ -2080,7 +2231,7 @@ async def execute_account_health_job(
 ) -> dict[str, Any]:
     if request.actionType != "instagram.account.health":
         return job
-    account = store.resolve_specific_account(request)
+    account = store.resolve_account(request)
     if not account:
         return job
 
@@ -2131,7 +2282,7 @@ async def execute_profile_get_job(
 ) -> dict[str, Any]:
     if request.actionType != "instagram.profile.get":
         return job
-    account = store.resolve_specific_account(request)
+    account = store.resolve_account(request)
     if not account:
         return job
 
@@ -2200,7 +2351,7 @@ async def execute_comments_list_job(
 ) -> dict[str, Any]:
     if request.actionType != "instagram.comments.list":
         return job
-    account = store.resolve_specific_account(request)
+    account = store.resolve_account(request)
     if not account:
         return job
 
@@ -2275,7 +2426,7 @@ async def execute_comments_reply_job(
 ) -> dict[str, Any]:
     if request.actionType != "instagram.comments.reply":
         return job
-    account = store.resolve_specific_account(request)
+    account = store.resolve_account(request)
     if not account:
         return job
 
@@ -2348,7 +2499,7 @@ async def execute_media_upload_job(
         "instagram.story.upload",
     }:
         return job
-    account = store.resolve_specific_account(request)
+    account = store.resolve_account(request)
     if not account:
         return job
 
@@ -2429,7 +2580,7 @@ async def execute_comments_moderation_job(
 ) -> dict[str, Any]:
     if request.actionType not in {"instagram.comments.delete", "instagram.comments.pin"}:
         return job
-    account = store.resolve_specific_account(request)
+    account = store.resolve_account(request)
     if not account:
         return job
 
@@ -2484,7 +2635,7 @@ async def execute_dm_inbox_job(
 ) -> dict[str, Any]:
     if request.actionType != "instagram.dm.inbox":
         return job
-    account = store.resolve_specific_account(request)
+    account = store.resolve_account(request)
     if not account:
         return job
 
@@ -2536,7 +2687,7 @@ async def execute_dm_send_job(
 ) -> dict[str, Any]:
     if request.actionType not in {"instagram.dm.send", "instagram.dm.reply"}:
         return job
-    account = store.resolve_specific_account(request)
+    account = store.resolve_account(request)
     if not account:
         return job
 
@@ -2595,7 +2746,7 @@ async def execute_insights_job(
 ) -> dict[str, Any]:
     if request.actionType != "instagram.insights.basic":
         return job
-    account = store.resolve_specific_account(request)
+    account = store.resolve_account(request)
     if not account:
         return job
 
@@ -2649,7 +2800,7 @@ async def execute_instagram_warmup_job(
 ) -> dict[str, Any]:
     if request.actionType != "instagram.warmup":
         return job
-    account = store.resolve_specific_account(request)
+    account = store.resolve_account(request)
     if not account:
         return job
 
@@ -2775,7 +2926,7 @@ async def execute_smart_comments_discovery_job(
 ) -> dict[str, Any]:
     if request.actionType != "instagram.comments.smart_reply":
         return job
-    account = store.resolve_specific_account(request)
+    account = store.resolve_account(request)
     if not account:
         return job
 
@@ -2881,17 +3032,7 @@ async def execute_smart_comments_input_job(
         for candidate in result.get("candidates", [])
         if isinstance(candidate, dict) and candidate.get("candidateId")
     }
-    account = store.resolve_specific_account(
-        JobStartRequest(
-            idempotencyKey=job["idempotencyKey"],
-            orderId=job["orderId"],
-            platform="instagram",
-            actionType="instagram.comments.smart_reply",
-            quantity=job.get("quantity", 1),
-            accountSelector=job.get("accountSelector") or {"mode": "system"},
-            payload=job.get("payload") or {},
-        ),
-    )
+    account = store.resolve_account(request_from_job(job))
     if not account:
         raise HTTPException(status_code=422, detail="Workflow input requires a specific leased account")
 

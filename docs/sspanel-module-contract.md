@@ -25,6 +25,10 @@ uv run ruff check aiograpi_rest tests
 - `idempotencyKey` is required for every start and workflow input request.
 - `accountSelector` refers to opaque executor account IDs; the panel stores
   only a binding and public projection.
+- A `system` selector is constrained by the panel's
+  `allowedExecutorAccountIds` list. The executor chooses one currently
+  available account from that pool, records it in `assignedAccountIds`, and
+  applies the same lease rules as a `specific` assignment.
 - Sessions, cookies, passwords, and proxy credentials remain in encrypted
   executor storage.
 - Provider errors become typed external statuses and terminal challenge/login

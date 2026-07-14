@@ -381,7 +381,7 @@ async def test_sspanel_job_status_is_toolkit_compatible():
     assert created.json()["status"] == "queued"
     assert status.json()["jobId"] == job_id
     assert status.json()["status"] == "failed"
-    assert status.json()["errorCode"] == "executor_no_terminal_transition"
+    assert status.json()["errorCode"] == "NO_EXECUTOR_ACCOUNT_AVAILABLE"
     assert status.json()["completedCount"] == 0
     assert status.json()["totalCount"] == 1
     assert status.json()["result"] == {}
@@ -432,6 +432,58 @@ async def test_sspanel_account_health_job_completes_for_imported_specific_accoun
     assert fake_client.calls == ["account_info"]
     assert factory_accounts[0]["executorAccountId"] == account_id
     assert factory_accounts[0]["sessionid"] == "raw-session-secret"
+
+
+@pytest.mark.asyncio
+async def test_sspanel_system_selector_assigns_only_from_panel_approved_pool(monkeypatch):
+    fake_client = FakeHealthClient()
+    factory_accounts = []
+
+    def fake_factory(account):
+        factory_accounts.append(account)
+        return fake_client
+
+    monkeypatch.setattr(sspanel, "create_instagram_health_client", fake_factory, raising=False)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        first = await _import_session(client)
+        second = await client.post(
+            "/module/v1/accounts/import-session",
+            headers={"X-SSPanel-Executor-Key": "executor-secret"},
+            json={"username": "second_user", "sessionid": "second-session"},
+        )
+        first_account_id = first.json()["executorAccountId"]
+        second_account_id = second.json()["executorAccountId"]
+        created = await _post_job(
+            client,
+            idempotency_key="instagram:system-selector:1",
+            account_selector={
+                "mode": "system",
+                "constraints": {"allowedExecutorAccountIds": [second_account_id]},
+            },
+        )
+        status = await _wait_for_terminal(client, created.json()["jobId"])
+
+    assert first_account_id != second_account_id
+    assert status.json()["status"] == "completed"
+    assert status.json()["assignedAccountIds"] == [second_account_id]
+    assert status.json()["accountHealth"]["executorAccountId"] == second_account_id
+    assert [account["executorAccountId"] for account in factory_accounts] == [second_account_id]
+
+
+@pytest.mark.asyncio
+async def test_sspanel_system_selector_rejects_an_empty_approved_pool():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await _post_job(
+            client,
+            idempotency_key="instagram:system-selector:invalid:1",
+            account_selector={
+                "mode": "system",
+                "constraints": {"allowedExecutorAccountIds": []},
+            },
+        )
+
+    assert response.status_code == 422
 
 
 @pytest.mark.asyncio
@@ -1146,6 +1198,38 @@ def test_executor_account_write_lease_blocks_until_terminal_job(tmp_path):
         store.close()
 
 
+def test_system_selector_skips_an_account_with_an_active_lease(tmp_path):
+    store = sspanel.SspanelExecutorStore(str(tmp_path / "system-selector-lease.sqlite3"))
+    try:
+        first = store.import_account(sspanel.ImportSessionRequest(username="first_user"))
+        second = store.import_account(sspanel.ImportSessionRequest(username="second_user"))
+        store.acquire_account_leases([first["executorAccountId"]], "busy-job")
+        request = sspanel.JobStartRequest(
+            idempotencyKey="instagram:system-selector:lease",
+            orderId=1,
+            platform="instagram",
+            actionType="instagram.comments.reply",
+            quantity=1,
+            accountSelector={
+                "mode": "system",
+                "constraints": {
+                    "allowedExecutorAccountIds": [
+                        first["executorAccountId"],
+                        second["executorAccountId"],
+                    ],
+                },
+            },
+            payload={"mediaId": "media-1", "text": "reply"},
+        )
+
+        selected = store.resolve_system_account(request)
+
+        assert selected is not None
+        assert selected["executorAccountId"] == second["executorAccountId"]
+    finally:
+        store.close()
+
+
 def test_executor_operator_pause_and_resume_are_idempotent(tmp_path):
     store = sspanel.SspanelExecutorStore(str(tmp_path / "operator-pause.json"))
     try:
@@ -1192,6 +1276,7 @@ def test_executor_worker_claim_and_restart_recovery_are_persisted(tmp_path):
     )
 
     first_store = sspanel.SspanelExecutorStore(str(path))
+    first_store.import_account(sspanel.ImportSessionRequest(username="recovery_user"))
     created = first_store.create_job(request)
     claimed = first_store.claim_next_job("worker-a")
     assert created["status"] == "queued"

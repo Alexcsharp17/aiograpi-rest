@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 TERMINAL_JOB_STATUSES = frozenset(
     {
         "completed",
