@@ -35,6 +35,20 @@ def test_storage_encrypts_rows_and_reopens_them(tmp_path, monkeypatch):
         reopened.close()
 
 
+def test_storage_reads_encryption_key_from_mounted_secret_file(tmp_path, monkeypatch):
+    monkeypatch.delenv("SSPANEL_EXECUTOR_ENCRYPTION_KEY", raising=False)
+    key_file = tmp_path / "encryption-key"
+    key_file.write_text(KEY)
+    monkeypatch.setenv("SSPANEL_EXECUTOR_ENCRYPTION_KEY_FILE", str(key_file))
+
+    store = SQLiteJsonStore(str(tmp_path / "executor.sqlite3"))
+    try:
+        store.table("jobs").insert({"jobId": "job-file-secret", "idempotencyKey": "idem-file-secret", "payload": {}})
+        assert store.table("jobs").get(lambda row: row.get("jobId") == "job-file-secret") is not None
+    finally:
+        store.close()
+
+
 def test_storage_requires_an_explicit_key_outside_dev_mode(tmp_path, monkeypatch):
     monkeypatch.delenv("SSPANEL_EXECUTOR_ENCRYPTION_KEY", raising=False)
     monkeypatch.delenv("SSPANEL_EXECUTOR_ENCRYPTION_KEYS", raising=False)

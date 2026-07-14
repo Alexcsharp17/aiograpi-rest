@@ -23,6 +23,12 @@ This checkout is used by SS-panel as `modules/aiograpi-rest` on branch
   executor reads active and previous keys during startup, then re-wraps all
   rows with the active key. Remove the previous key only after startup has
   completed successfully and the encrypted database backup is verified.
+- For Docker/Kubernetes secret mounts, set `SSPANEL_EXECUTOR_ENCRYPTION_KEY_FILE`
+  or `SSPANEL_EXECUTOR_ENCRYPTION_KEYS_FILE`; file-backed values take precedence
+  over the corresponding environment variable. API credentials and callback
+  secrets support the same `SSPANEL_EXECUTOR_API_KEY_FILE`,
+  `SSPANEL_EXECUTOR_API_KEYS_FILE`, and `SSPANEL_CALLBACK_SECRET_FILE` pattern.
+  Secret file read failures fail closed without logging the secret value.
 - The canonical schema is `modules/ss-toolkit/contracts/external-executor.schema.json`.
   Regenerate the Python fixture with `python scripts/sync_sspanel_contract.py`.
 

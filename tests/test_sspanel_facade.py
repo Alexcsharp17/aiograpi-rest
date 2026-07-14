@@ -738,6 +738,22 @@ async def test_module_manifest_advertises_only_implemented_capabilities():
 
 
 @pytest.mark.asyncio
+async def test_executor_auth_reads_api_key_from_mounted_secret_file(tmp_path, monkeypatch):
+    key_file = tmp_path / "executor-api-key"
+    key_file.write_text("executor-secret")
+    monkeypatch.delenv("SSPANEL_EXECUTOR_API_KEY", raising=False)
+    monkeypatch.setenv("SSPANEL_EXECUTOR_API_KEY_FILE", str(key_file))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/module/v1/manifest",
+            headers={"X-SSPanel-Executor-Key": "executor-secret"},
+        )
+
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
 async def test_manifest_advertises_callbacks_only_when_url_and_secret_are_configured(monkeypatch):
     monkeypatch.setenv("SSPANEL_CALLBACK_SECRET", "callback-secret")
     monkeypatch.delenv("SSPANEL_CALLBACK_URL", raising=False)

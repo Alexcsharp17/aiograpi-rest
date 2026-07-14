@@ -26,6 +26,20 @@ class StorageConfigurationError(RuntimeError):
     """Raised when encrypted executor storage is not configured safely."""
 
 
+def read_secret(name: str) -> str:
+    """Read a secret from a mounted file, falling back to the environment."""
+    file_path = os.getenv(f"{name}_FILE", "").strip()
+    if file_path:
+        try:
+            value = Path(file_path).read_text(encoding="utf-8").strip()
+        except (OSError, UnicodeError) as error:
+            raise StorageConfigurationError(f"{name}_FILE could not be read") from error
+        if not value:
+            raise StorageConfigurationError(f"{name}_FILE must not be empty")
+        return value
+    return os.getenv(name, "").strip()
+
+
 def _decode_encryption_key(encoded: object, label: str) -> bytes:
     if not isinstance(encoded, str) or not encoded.strip():
         raise StorageConfigurationError(f"{label} must be configured")
@@ -42,7 +56,7 @@ def _decode_encryption_key(encoded: object, label: str) -> bytes:
 
 def _encryption_keyring() -> tuple[dict[str, bytes], str]:
     """Resolve the active storage key and optional previous rotation keys."""
-    configured = os.getenv("SSPANEL_EXECUTOR_ENCRYPTION_KEYS", "").strip()
+    configured = read_secret("SSPANEL_EXECUTOR_ENCRYPTION_KEYS")
     if configured:
         try:
             parsed = json.loads(configured)
@@ -78,7 +92,7 @@ def _encryption_keyring() -> tuple[dict[str, bytes], str]:
             raise StorageConfigurationError(
                 "SSPANEL_EXECUTOR_ENCRYPTION_KEYS does not contain a valid key"
             )
-        active_id = os.getenv("SSPANEL_EXECUTOR_ACTIVE_ENCRYPTION_KEY_ID", "").strip()
+        active_id = read_secret("SSPANEL_EXECUTOR_ACTIVE_ENCRYPTION_KEY_ID")
         if not active_id:
             active_id = next(iter(keys))
         if active_id not in keys:
@@ -87,7 +101,7 @@ def _encryption_keyring() -> tuple[dict[str, bytes], str]:
             )
         return keys, active_id
 
-    encoded = os.getenv("SSPANEL_EXECUTOR_ENCRYPTION_KEY", "").strip()
+    encoded = read_secret("SSPANEL_EXECUTOR_ENCRYPTION_KEY")
     if encoded:
         return {"legacy": _decode_encryption_key(encoded, "SSPANEL_EXECUTOR_ENCRYPTION_KEY")}, "legacy"
     if os.getenv("SSPANEL_EXECUTOR_ALLOW_INSECURE_DEV_STORAGE", "").lower() == "true":

@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Security, status
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from aiograpi_rest.sspanel_storage import Query, SQLiteJsonStore
+from aiograpi_rest.sspanel_storage import Query, SQLiteJsonStore, StorageConfigurationError, read_secret
 
 logger = logging.getLogger("aiograpi_rest.sspanel")
 
@@ -166,7 +166,14 @@ def _worker_lease_ttl_seconds() -> int:
 
 
 def _callback_secret() -> str:
-    return os.getenv("SSPANEL_CALLBACK_SECRET", "").strip()
+    return _configured_secret("SSPANEL_CALLBACK_SECRET")
+
+
+def _configured_secret(name: str) -> str:
+    try:
+        return read_secret(name)
+    except StorageConfigurationError as error:
+        raise HTTPException(status_code=503, detail="Executor secret configuration is invalid") from error
 
 
 def _callback_url(value: Any) -> Optional[str]:
@@ -193,7 +200,7 @@ def _callback_retry_delay(attempts: int) -> int:
 
 
 def _executor_credentials() -> list[dict[str, Any]]:
-    configured = os.getenv("SSPANEL_EXECUTOR_API_KEYS", "").strip()
+    configured = _configured_secret("SSPANEL_EXECUTOR_API_KEYS")
     if configured:
         try:
             parsed = json.loads(configured)
@@ -215,7 +222,7 @@ def _executor_credentials() -> list[dict[str, Any]]:
             return credentials
         raise HTTPException(status_code=503, detail="Executor credential configuration is empty")
 
-    legacy = os.getenv("SSPANEL_EXECUTOR_API_KEY", "")
+    legacy = _configured_secret("SSPANEL_EXECUTOR_API_KEY")
     return [{"id": "legacy", "secret": legacy, "scopes": ["*"]}] if legacy else []
 
 
