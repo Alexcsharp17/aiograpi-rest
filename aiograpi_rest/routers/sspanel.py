@@ -333,7 +333,8 @@ def _executor_credentials() -> list[dict[str, Any]]:
         raise HTTPException(status_code=503, detail="Executor credential configuration is empty")
 
     legacy = _configured_secret("SSPANEL_EXECUTOR_API_KEY")
-    return [{"id": "legacy", "secret": legacy, "scopes": ["*"]}] if legacy else []
+    configured_id = os.getenv("SSPANEL_EXECUTOR_API_KEY_ID", "legacy").strip() or "legacy"
+    return [{"id": configured_id, "secret": legacy, "scopes": ["*"]}] if legacy else []
 
 
 def _authenticate_executor_key(key: Optional[str], key_id: Optional[str]) -> Optional[dict[str, Any]]:
