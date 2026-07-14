@@ -29,6 +29,11 @@ This checkout is used by SS-panel as `modules/aiograpi-rest` on branch
   secrets support the same `SSPANEL_EXECUTOR_API_KEY_FILE`,
   `SSPANEL_EXECUTOR_API_KEYS_FILE`, and `SSPANEL_CALLBACK_SECRET_FILE` pattern.
   Secret file read failures fail closed without logging the secret value.
+- Deployments that use a remote secret manager can provide an adapter class via
+  `SSPANEL_SECRET_PROVIDER_CLASS=package.module:ProviderClass`. The class is
+  loaded during application startup, must implement `get(name)`, and is kept
+  outside this fork so the executor does not depend on a Vault/AWS SDK. Mounted
+  files remain the default when the variable is absent.
 - The canonical schema is `modules/ss-toolkit/contracts/external-executor.schema.json`.
   Regenerate the Python fixture with `python scripts/sync_sspanel_contract.py`.
 

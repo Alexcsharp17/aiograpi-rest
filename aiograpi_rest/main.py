@@ -40,6 +40,7 @@ from aiograpi_rest.routers import (
     user,
     video,
 )
+from aiograpi_rest.sspanel_storage import StorageConfigurationError, resolve_secret_provider, set_default_secret_provider
 from aiograpi_rest.storages import ClientStorage
 
 APP_PACKAGE_NAME = "aiograpi-rest"
@@ -620,6 +621,10 @@ app.include_router(track.music_router)
 
 @app.on_event("startup")
 async def start_sspanel_executor_worker() -> None:
+    try:
+        set_default_secret_provider(resolve_secret_provider())
+    except StorageConfigurationError as error:
+        raise RuntimeError("SS-panel executor secret provider configuration is invalid") from error
     sspanel.start_worker()
 
 

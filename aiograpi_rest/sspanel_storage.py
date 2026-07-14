@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import importlib
 import json
 import os
 import sqlite3
@@ -64,8 +65,36 @@ _default_secret_provider: SecretProvider = EnvironmentSecretProvider()
 
 def set_default_secret_provider(provider: SecretProvider) -> None:
     """Install a deployment-owned provider before the app starts serving."""
+    if not callable(getattr(provider, "get", None)):
+        raise StorageConfigurationError("Configured secret provider must implement get(name)")
     global _default_secret_provider
     _default_secret_provider = provider
+
+
+def resolve_secret_provider() -> SecretProvider:
+    """Resolve an optional deployment adapter without bundling a vendor SDK.
+
+    ``SSPANEL_SECRET_PROVIDER_CLASS`` accepts ``module.path:ProviderClass``.
+    The provider is constructed once during application startup and must expose
+    ``get(name)``. With no class configured, mounted files and environment
+    variables remain the default.
+    """
+    specification = os.getenv("SSPANEL_SECRET_PROVIDER_CLASS", "").strip()
+    if not specification:
+        return EnvironmentSecretProvider()
+    module_name, separator, class_name = specification.partition(":")
+    if not separator or not module_name or not class_name:
+        raise StorageConfigurationError(
+            "SSPANEL_SECRET_PROVIDER_CLASS must use module.path:ProviderClass format"
+        )
+    try:
+        module = importlib.import_module(module_name)
+        provider_factory = getattr(module, class_name)
+        provider = provider_factory()
+    except (ImportError, AttributeError, TypeError) as error:
+        raise StorageConfigurationError("Configured secret provider could not be loaded") from error
+    set_default_secret_provider(provider)
+    return provider
 
 
 def read_secret(name: str, provider: Optional[SecretProvider] = None) -> str:

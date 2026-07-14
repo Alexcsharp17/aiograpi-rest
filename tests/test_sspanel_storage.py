@@ -6,7 +6,11 @@ import sqlite3
 import pytest
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from aiograpi_rest.sspanel_storage import SQLiteJsonStore, StorageConfigurationError
+from aiograpi_rest.sspanel_storage import (
+    SQLiteJsonStore,
+    StorageConfigurationError,
+    resolve_secret_provider,
+)
 
 KEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 ROTATED_KEY = "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="
@@ -67,6 +71,21 @@ def test_storage_accepts_a_deployment_secret_provider(tmp_path, monkeypatch):
         assert store.table("jobs").get(lambda row: row.get("jobId") == "job-provider") is not None
     finally:
         store.close()
+
+
+def test_secret_provider_class_can_be_loaded_from_deployment_configuration(monkeypatch):
+    monkeypatch.setenv(
+        "SSPANEL_SECRET_PROVIDER_CLASS",
+        "aiograpi_rest.sspanel_storage:EnvironmentSecretProvider",
+    )
+    provider = resolve_secret_provider()
+    assert provider.get("MISSING_SECRET") == ""
+
+
+def test_invalid_secret_provider_class_fails_closed(monkeypatch):
+    monkeypatch.setenv("SSPANEL_SECRET_PROVIDER_CLASS", "missing.module:Provider")
+    with pytest.raises(StorageConfigurationError, match="could not be loaded"):
+        resolve_secret_provider()
 
 
 def test_storage_requires_an_explicit_key_outside_dev_mode(tmp_path, monkeypatch):
