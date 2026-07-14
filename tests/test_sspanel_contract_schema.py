@@ -42,3 +42,20 @@ def test_executor_fixture_matches_canonical_schema():
     assert {field: CONTRACT_FIXTURE[field] for field in fields} == {
         field: _schema_enum(schema, field) for field in fields
     }
+
+
+def test_account_selector_constraints_keep_known_fields_typed_and_extensible():
+    schema_path = _schema_path()
+    if not schema_path.is_file():
+        pytest.skip(
+            "canonical ss-toolkit schema is not mounted; run this assertion from the root checkout or CI contract job"
+        )
+
+    constraints = json.loads(schema_path.read_text(encoding="utf-8"))["$defs"][
+        "externalExecutorAccountConstraints"
+    ]
+
+    assert constraints["type"] == "object"
+    assert constraints["additionalProperties"] is True
+    assert constraints["properties"]["allowedExecutorAccountIds"]["minItems"] == 1
+    assert constraints["properties"]["excludeExecutorAccountIds"]["minItems"] == 0
