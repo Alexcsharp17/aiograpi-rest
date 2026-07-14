@@ -193,5 +193,22 @@ def test_storage_migrates_legacy_tinydb_json_to_encrypted_sqlite(tmp_path, monke
     finally:
         store.close()
 
-    assert (tmp_path / "executor.json.legacy.json").exists()
+    assert not (tmp_path / "executor.json.legacy.json").exists()
+    assert not (tmp_path / "executor.json.legacy.enc").exists()
     assert b"legacy-secret" not in path.read_bytes()
+
+
+def test_storage_removes_stale_plaintext_legacy_backup(tmp_path, monkeypatch):
+    monkeypatch.setenv("SSPANEL_EXECUTOR_ENCRYPTION_KEY", KEY)
+    path = tmp_path / "executor.sqlite3"
+    store = SQLiteJsonStore(str(path))
+    store.close()
+
+    legacy_backup = tmp_path / "executor.sqlite3.legacy.json"
+    legacy_backup.write_text(json.dumps({"accounts": {"1": {"sessionid": "stale-secret"}}}))
+
+    reopened = SQLiteJsonStore(str(path))
+    reopened.close()
+
+    assert not legacy_backup.exists()
+    assert b"stale-secret" not in path.read_bytes()

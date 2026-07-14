@@ -372,6 +372,8 @@ class SQLiteJsonStore:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
+        self._legacy_backup_path = self.path.with_name(f"{self.path.name}.legacy.enc")
+        self._legacy_plaintext_backup_path = self.path.with_name(f"{self.path.name}.legacy.json")
         encryption_keys, active_key_id = _encryption_keyring(secret_provider)
         self.codec = _JsonCodec(encryption_keys, active_key_id)
         self._migrate_legacy_json()
@@ -400,6 +402,7 @@ class SQLiteJsonStore:
         self._legacy_rows = None
         self._import_legacy_rows()
         self._validate_existing_payloads()
+        self._cleanup_legacy_artifacts()
 
     @property
     def lock(self) -> threading.RLock:
@@ -439,25 +442,65 @@ class SQLiteJsonStore:
 
     def _migrate_legacy_json(self) -> None:
         self._legacy_rows: Optional[dict[str, list[dict[str, Any]]]] = None
-        if not self.path.exists() or self.path.stat().st_size == 0:
+        source_path: Optional[Path] = None
+        raw: Optional[dict[str, Any]] = None
+
+        if self.path.exists() and self.path.stat().st_size > 0:
+            with self.path.open("rb") as stream:
+                header = stream.read(16)
+            if header.startswith(b"SQLite format 3"):
+                return
+            source_path = self.path
+        elif self._legacy_plaintext_backup_path.exists():
+            source_path = self._legacy_plaintext_backup_path
+
+        if source_path is not None:
+            try:
+                decoded = json.loads(source_path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise StorageConfigurationError("Executor storage is neither SQLite nor valid legacy JSON") from error
+            if not isinstance(decoded, dict):
+                raise StorageConfigurationError("Legacy executor storage must contain a JSON object")
+            raw = decoded
+            self._legacy_rows = self._legacy_rows_from_raw(raw)
+            self._write_encrypted_legacy_backup(raw)
+            source_path.unlink()
             return
-        with self.path.open("rb") as stream:
-            header = stream.read(16)
-        if header.startswith(b"SQLite format 3"):
-            return
-        try:
-            raw = json.loads(self.path.read_text())
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
-            raise StorageConfigurationError("Executor storage is neither SQLite nor valid legacy JSON") from error
-        self._legacy_rows = {
+
+        if not self.path.exists() and self._legacy_backup_path.exists():
+            try:
+                envelope = self.codec.decode(self._legacy_backup_path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError) as error:
+                raise StorageConfigurationError("Encrypted legacy executor storage could not be read") from error
+            raw = envelope.get("tables")
+            if not isinstance(raw, dict):
+                raise StorageConfigurationError("Encrypted legacy executor storage has an invalid payload")
+            self._legacy_rows = self._legacy_rows_from_raw(raw)
+
+    @staticmethod
+    def _legacy_rows_from_raw(raw: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+        return {
             table: [row for row in rows.values() if isinstance(row, dict)]
             for table, rows in raw.items()
             if table in {"jobs", "accounts", "usage"} and isinstance(rows, dict)
         }
-        legacy_path = self.path.with_name(self.path.name + ".legacy.json")
-        if legacy_path.exists():
-            legacy_path.unlink()
-        self.path.replace(legacy_path)
+
+    def _write_encrypted_legacy_backup(self, raw: dict[str, Any]) -> None:
+        temporary_path = self.path.with_name(
+            f".{self.path.name}.legacy.{os.getpid()}.{threading.get_ident()}.tmp"
+        )
+        temporary_path.write_text(
+            self.codec.encode({"format": "legacy-tinydb", "tables": raw}),
+            encoding="utf-8",
+        )
+        os.replace(temporary_path, self._legacy_backup_path)
+
+    def _cleanup_legacy_artifacts(self) -> None:
+        for artifact in (self._legacy_backup_path, self._legacy_plaintext_backup_path):
+            try:
+                artifact.unlink()
+            except FileNotFoundError:
+                continue
 
     def _import_legacy_rows(self) -> None:
         if not self._imported_legacy_rows:
