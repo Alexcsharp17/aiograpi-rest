@@ -40,7 +40,11 @@ from aiograpi_rest.routers import (
     user,
     video,
 )
-from aiograpi_rest.sspanel_storage import StorageConfigurationError, resolve_secret_provider, set_default_secret_provider
+from aiograpi_rest.sspanel_storage import (
+    StorageConfigurationError,
+    resolve_secret_provider,
+    set_default_secret_provider,
+)
 from aiograpi_rest.storages import ClientStorage
 
 APP_PACKAGE_NAME = "aiograpi-rest"
