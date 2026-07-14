@@ -1,6 +1,7 @@
 {
   "contractVersions": [
-    "1.0"
+    "1.0",
+    "1.1"
   ],
   "moduleFeatures": [
     "callbacks.v1",

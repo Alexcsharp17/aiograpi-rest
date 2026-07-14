@@ -705,7 +705,7 @@ async def test_module_manifest_advertises_only_implemented_capabilities():
     assert response.json() == {
         "moduleId": "instagram-executor",
         "platform": "instagram",
-        "contractVersions": ["1.0"],
+        "contractVersions": ["1.0", "1.1"],
         "features": [
             "event-sequence.v1",
             "managed-workflows.v1",
