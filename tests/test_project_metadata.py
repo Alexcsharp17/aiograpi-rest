@@ -482,7 +482,7 @@ def test_dockerfile_uses_python_313_and_pyproject_install():
     assert "chown -R aiograpi:aiograpi /app" in dockerfile
     assert "USER aiograpi" in dockerfile
     assert "HEALTHCHECK" in dockerfile
-    assert "http://127.0.0.1:8000/health" in dockerfile
+    assert "http://127.0.0.1:8000/module/v1/health" in dockerfile
 
 
 def test_compose_runs_api_service_on_8000():
