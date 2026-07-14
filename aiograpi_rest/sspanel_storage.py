@@ -16,7 +16,7 @@ import sqlite3
 import threading
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable, Iterator, Optional
+from typing import Any, Callable, Iterator, Optional, Protocol
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -26,18 +26,56 @@ class StorageConfigurationError(RuntimeError):
     """Raised when encrypted executor storage is not configured safely."""
 
 
-def read_secret(name: str) -> str:
-    """Read a secret from a mounted file, falling back to the environment."""
-    file_path = os.getenv(f"{name}_FILE", "").strip()
-    if file_path:
-        try:
-            value = Path(file_path).read_text(encoding="utf-8").strip()
-        except (OSError, UnicodeError) as error:
-            raise StorageConfigurationError(f"{name}_FILE could not be read") from error
-        if not value:
-            raise StorageConfigurationError(f"{name}_FILE must not be empty")
-        return value
-    return os.getenv(name, "").strip()
+class SecretProvider(Protocol):
+    """Deployment-owned boundary for resolving executor secrets.
+
+    The executor only needs a named secret. A deployment may inject a provider
+    backed by Vault, AWS Secrets Manager, or Kubernetes without making the
+    platform runtime depend on that vendor SDK.
+    """
+
+    def get(self, name: str) -> str:
+        ...
+
+
+class EnvironmentSecretProvider:
+    """Resolve secrets from ``NAME_FILE`` first, then ``NAME``.
+
+    This is the default provider for local development and Docker/Kubernetes
+    mounted secrets. Remote providers should implement ``SecretProvider`` and
+    be passed into ``SQLiteJsonStore`` by the deployment adapter.
+    """
+
+    def get(self, name: str) -> str:
+        file_path = os.getenv(f"{name}_FILE", "").strip()
+        if file_path:
+            try:
+                value = Path(file_path).read_text(encoding="utf-8").strip()
+            except (OSError, UnicodeError) as error:
+                raise StorageConfigurationError(f"{name}_FILE could not be read") from error
+            if not value:
+                raise StorageConfigurationError(f"{name}_FILE must not be empty")
+            return value
+        return os.getenv(name, "").strip()
+
+
+_default_secret_provider: SecretProvider = EnvironmentSecretProvider()
+
+
+def set_default_secret_provider(provider: SecretProvider) -> None:
+    """Install a deployment-owned provider before the app starts serving."""
+    global _default_secret_provider
+    _default_secret_provider = provider
+
+
+def read_secret(name: str, provider: Optional[SecretProvider] = None) -> str:
+    """Read a secret through the configured deployment boundary."""
+    return (provider or _default_secret_provider).get(name)
+
+
+def _read_secret(name: str, provider: Optional[SecretProvider]) -> str:
+    """Keep secret resolution injectable while preserving the legacy helper."""
+    return read_secret(name, provider)
 
 
 def _decode_encryption_key(encoded: object, label: str) -> bytes:
@@ -54,9 +92,9 @@ def _decode_encryption_key(encoded: object, label: str) -> bytes:
     return key
 
 
-def _encryption_keyring() -> tuple[dict[str, bytes], str]:
+def _encryption_keyring(provider: Optional[SecretProvider] = None) -> tuple[dict[str, bytes], str]:
     """Resolve the active storage key and optional previous rotation keys."""
-    configured = read_secret("SSPANEL_EXECUTOR_ENCRYPTION_KEYS")
+    configured = _read_secret("SSPANEL_EXECUTOR_ENCRYPTION_KEYS", provider)
     if configured:
         try:
             parsed = json.loads(configured)
@@ -92,7 +130,7 @@ def _encryption_keyring() -> tuple[dict[str, bytes], str]:
             raise StorageConfigurationError(
                 "SSPANEL_EXECUTOR_ENCRYPTION_KEYS does not contain a valid key"
             )
-        active_id = read_secret("SSPANEL_EXECUTOR_ACTIVE_ENCRYPTION_KEY_ID")
+        active_id = _read_secret("SSPANEL_EXECUTOR_ACTIVE_ENCRYPTION_KEY_ID", provider)
         if not active_id:
             active_id = next(iter(keys))
         if active_id not in keys:
@@ -101,7 +139,7 @@ def _encryption_keyring() -> tuple[dict[str, bytes], str]:
             )
         return keys, active_id
 
-    encoded = read_secret("SSPANEL_EXECUTOR_ENCRYPTION_KEY")
+    encoded = _read_secret("SSPANEL_EXECUTOR_ENCRYPTION_KEY", provider)
     if encoded:
         return {"legacy": _decode_encryption_key(encoded, "SSPANEL_EXECUTOR_ENCRYPTION_KEY")}, "legacy"
     if os.getenv("SSPANEL_EXECUTOR_ALLOW_INSECURE_DEV_STORAGE", "").lower() == "true":
@@ -285,11 +323,11 @@ class SQLiteJsonTable:
 
 
 class SQLiteJsonStore:
-    def __init__(self, path: str):
+    def __init__(self, path: str, secret_provider: Optional[SecretProvider] = None):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
-        encryption_keys, active_key_id = _encryption_keyring()
+        encryption_keys, active_key_id = _encryption_keyring(secret_provider)
         self.codec = _JsonCodec(encryption_keys, active_key_id)
         self._migrate_legacy_json()
         self.connection = sqlite3.connect(str(self.path), timeout=30, check_same_thread=False)

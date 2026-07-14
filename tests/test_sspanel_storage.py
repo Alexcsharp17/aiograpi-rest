@@ -12,6 +12,14 @@ KEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 ROTATED_KEY = "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="
 
 
+class FakeSecretProvider:
+    def __init__(self, values):
+        self.values = values
+
+    def get(self, name: str) -> str:
+        return self.values.get(name, "")
+
+
 def test_storage_encrypts_rows_and_reopens_them(tmp_path, monkeypatch):
     monkeypatch.setenv("SSPANEL_EXECUTOR_ENCRYPTION_KEY", KEY)
     path = tmp_path / "executor.sqlite3"
@@ -45,6 +53,18 @@ def test_storage_reads_encryption_key_from_mounted_secret_file(tmp_path, monkeyp
     try:
         store.table("jobs").insert({"jobId": "job-file-secret", "idempotencyKey": "idem-file-secret", "payload": {}})
         assert store.table("jobs").get(lambda row: row.get("jobId") == "job-file-secret") is not None
+    finally:
+        store.close()
+
+
+def test_storage_accepts_a_deployment_secret_provider(tmp_path, monkeypatch):
+    monkeypatch.delenv("SSPANEL_EXECUTOR_ENCRYPTION_KEY", raising=False)
+    provider = FakeSecretProvider({"SSPANEL_EXECUTOR_ENCRYPTION_KEY": KEY})
+
+    store = SQLiteJsonStore(str(tmp_path / "executor.sqlite3"), secret_provider=provider)
+    try:
+        store.table("jobs").insert({"jobId": "job-provider", "idempotencyKey": "idem-provider", "payload": {}})
+        assert store.table("jobs").get(lambda row: row.get("jobId") == "job-provider") is not None
     finally:
         store.close()
 
