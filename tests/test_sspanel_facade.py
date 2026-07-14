@@ -80,6 +80,20 @@ async def _import_session(client):
     )
 
 
+async def _start_specific_job(client, action_type, payload, *, idempotency_key):
+    imported = await _import_session(client)
+    account_id = imported.json()["executorAccountId"]
+    created = await _post_job(
+        client,
+        idempotency_key=idempotency_key,
+        action_type=action_type,
+        account_selector={"mode": "specific", "accountIds": [account_id]},
+        payload=payload,
+    )
+    status = await _wait_for_terminal(client, created.json()["jobId"])
+    return created, status
+
+
 async def _wait_for_terminal(client, job_id):
     terminal = {
         "completed",
@@ -166,6 +180,56 @@ class FakeHealthClient:
         if self.failure:
             raise self.failure
         return {"pk": 22, "text": text, "media_id": media_id}
+
+
+class FakeCapabilityClient(FakeHealthClient):
+    async def photo_upload(self, path, caption, **kwargs):
+        self.calls.append(("photo_upload", path.suffix, caption))
+        return {"pk": 101, "media_type": 1, "caption": caption}
+
+    async def video_upload(self, path, caption, **kwargs):
+        self.calls.append(("video_upload", path.suffix, caption))
+        return {"pk": 102, "media_type": 2, "caption": caption}
+
+    async def clip_upload(self, path, caption, **kwargs):
+        self.calls.append(("clip_upload", path.suffix, caption))
+        return {"pk": 103, "media_type": 2, "product_type": "clips", "caption": caption}
+
+    async def photo_upload_to_story(self, path, caption, **kwargs):
+        self.calls.append(("photo_upload_to_story", path.suffix, caption))
+        return {"pk": 104, "media_type": 1, "caption": caption}
+
+    async def video_upload_to_story(self, path, caption, **kwargs):
+        self.calls.append(("video_upload_to_story", path.suffix, caption))
+        return {"pk": 105, "media_type": 2, "caption": caption}
+
+    async def comment_bulk_delete(self, media_id, comment_ids):
+        self.calls.append(("comment_bulk_delete", media_id, comment_ids))
+        return True
+
+    async def comment_pin(self, media_id, comment_id):
+        self.calls.append(("comment_pin", media_id, comment_id))
+        return True
+
+    async def direct_threads(self, **kwargs):
+        self.calls.append(("direct_threads", kwargs))
+        return [{"thread_id": 301, "messages": [{"text": "hello"}]}]
+
+    async def direct_send(self, text, user_ids=None, thread_ids=None):
+        self.calls.append(("direct_send", text, user_ids, thread_ids))
+        return {"id": "302", "text": text}
+
+    async def direct_answer(self, thread_id, text):
+        self.calls.append(("direct_answer", thread_id, text))
+        return {"id": "303", "thread_id": thread_id, "text": text}
+
+    async def insights_account(self):
+        self.calls.append(("insights_account",))
+        return {"reach": 10, "impressions": 20}
+
+    async def insights_media(self, media_id):
+        self.calls.append(("insights_media", media_id))
+        return {"media_id": media_id, "reach": 5}
 
 
 @pytest.mark.asyncio
@@ -644,10 +708,20 @@ async def test_module_manifest_advertises_only_implemented_capabilities():
         "contractVersions": ["1.0"],
         "capabilities": [
             "instagram.account.health",
+            "instagram.comments.delete",
             "instagram.comments.list",
+            "instagram.comments.pin",
             "instagram.comments.reply",
             "instagram.comments.smart_reply",
+            "instagram.dm.inbox",
+            "instagram.dm.reply",
+            "instagram.dm.send",
+            "instagram.insights.basic",
+            "instagram.media.upload.photo",
+            "instagram.media.upload.reel",
+            "instagram.media.upload.video",
             "instagram.profile.get",
+            "instagram.story.upload",
             "instagram.warmup",
         ],
         "workflowTypes": ["instagram.comments.smart_reply", "instagram.warmup"],
@@ -677,15 +751,186 @@ async def test_manifest_advertises_callbacks_only_when_url_and_secret_are_config
 
 
 @pytest.mark.asyncio
-async def test_module_api_rejects_planned_but_unimplemented_capability():
+async def test_module_api_rejects_invalid_payload_for_advertised_capability():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await _post_job(client, action_type="instagram.media.upload.photo")
+        response = await _post_job(
+            client,
+            action_type="instagram.media.upload.photo",
+            payload={},
+            account_selector={"mode": "system"},
+        )
 
     assert response.status_code == 422
-    assert response.json()["detail"] == {
-        "code": "UNSUPPORTED_CAPABILITY",
-        "capability": "instagram.media.upload.photo",
-    }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "media_url",
+    [
+        "http://127.0.0.1/internal.jpg",
+        "http://localhost/internal.jpg",
+        "https://user:pass@cdn.example.test/private.jpg",
+    ],
+)
+async def test_media_capability_rejects_private_or_credentialed_urls(media_url):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await _post_job(
+            client,
+            action_type="instagram.media.upload.photo",
+            payload={"mediaUrl": media_url},
+        )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("action_type", "payload", "expected_call", "result_key"),
+    [
+        (
+            "instagram.media.upload.photo",
+            {"mediaUrl": "https://cdn.example.test/photo.jpg", "caption": "photo"},
+            "photo_upload",
+            "media",
+        ),
+        (
+            "instagram.media.upload.video",
+            {"mediaUrl": "https://cdn.example.test/video.mp4", "caption": "video"},
+            "video_upload",
+            "media",
+        ),
+        (
+            "instagram.media.upload.reel",
+            {"mediaUrl": "https://cdn.example.test/reel.mp4", "caption": "reel"},
+            "clip_upload",
+            "media",
+        ),
+        (
+            "instagram.story.upload",
+            {"mediaUrl": "https://cdn.example.test/story.jpg", "mediaType": "photo", "caption": "story"},
+            "photo_upload_to_story",
+            "story",
+        ),
+    ],
+)
+async def test_media_capabilities_execute_with_private_temp_download(
+    monkeypatch,
+    tmp_path,
+    action_type,
+    payload,
+    expected_call,
+    result_key,
+):
+    client_stub = FakeCapabilityClient()
+    monkeypatch.setattr(sspanel, "create_instagram_media_client", lambda _account: client_stub)
+
+    def fake_download(_url, suffix):
+        path = tmp_path / f"input{suffix}"
+        path.write_bytes(b"test-media")
+        return path
+
+    monkeypatch.setattr(sspanel, "_download_media_to_temp", fake_download)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        _, status = await _start_specific_job(
+            client,
+            action_type,
+            payload,
+            idempotency_key=f"conformance:{action_type}:v1",
+        )
+
+    assert status.json()["status"] == "completed"
+    assert status.json()["completedCount"] == 1
+    assert result_key in status.json()["result"]
+    assert client_stub.calls[0][0] == expected_call
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("action_type", "payload", "expected_call", "completed_count"),
+    [
+        (
+            "instagram.comments.delete",
+            {"mediaId": "media-1", "commentIds": ["11", "12"]},
+            "comment_bulk_delete",
+            2,
+        ),
+        (
+            "instagram.comments.pin",
+            {"mediaId": "media-1", "commentIds": ["11"]},
+            "comment_pin",
+            1,
+        ),
+    ],
+)
+async def test_comment_moderation_capabilities_execute(
+    monkeypatch,
+    action_type,
+    payload,
+    expected_call,
+    completed_count,
+):
+    client_stub = FakeCapabilityClient()
+    monkeypatch.setattr(sspanel, "create_instagram_comments_client", lambda _account: client_stub)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        _, status = await _start_specific_job(
+            client,
+            action_type,
+            payload,
+            idempotency_key=f"conformance:{action_type}:v1",
+        )
+
+    assert status.json()["status"] == "completed"
+    assert status.json()["completedCount"] == completed_count
+    assert client_stub.calls[0][0] == expected_call
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("action_type", "payload", "expected_call"),
+    [
+        ("instagram.dm.inbox", {"amount": 5, "selectedFilter": "unread"}, "direct_threads"),
+        ("instagram.dm.send", {"text": "hello", "userIds": ["201"]}, "direct_send"),
+        ("instagram.dm.reply", {"threadId": "301", "text": "reply"}, "direct_answer"),
+    ],
+)
+async def test_dm_capabilities_execute(monkeypatch, action_type, payload, expected_call):
+    client_stub = FakeCapabilityClient()
+    monkeypatch.setattr(sspanel, "create_instagram_direct_client", lambda _account: client_stub)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        _, status = await _start_specific_job(
+            client,
+            action_type,
+            payload,
+            idempotency_key=f"conformance:{action_type}:v1",
+        )
+
+    assert status.json()["status"] == "completed"
+    assert status.json()["result"]["executorAccountId"].startswith("ig_acc_")
+    assert client_stub.calls[0][0] == expected_call
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("payload", "expected_call", "scope"),
+    [
+        ({}, "insights_account", "account"),
+        ({"mediaId": "media-1"}, "insights_media", "media"),
+    ],
+)
+async def test_basic_insights_capability_execute(monkeypatch, payload, expected_call, scope):
+    client_stub = FakeCapabilityClient()
+    monkeypatch.setattr(sspanel, "create_instagram_insights_client", lambda _account: client_stub)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        _, status = await _start_specific_job(
+            client,
+            "instagram.insights.basic",
+            payload,
+            idempotency_key=f"conformance:instagram.insights.basic:{scope}:v1",
+        )
+
+    assert status.json()["status"] == "completed"
+    assert status.json()["result"]["scope"] == scope
+    assert client_stub.calls[0][0] == expected_call
 
 
 @pytest.mark.asyncio
@@ -756,7 +1001,7 @@ def test_executor_account_write_lease_blocks_until_terminal_job(tmp_path):
             actionType="instagram.media.upload.photo",
             quantity=1,
             accountSelector={"mode": "specific", "accountIds": [account["executorAccountId"]]},
-            payload={},
+            payload={"mediaUrl": "https://cdn.example.test/photo.jpg"},
         )
         first_job = store.create_job(first)
 
@@ -835,6 +1080,45 @@ def test_executor_worker_claim_and_restart_recovery_are_persisted(tmp_path):
         reclaimed = recovered_store.claim_next_job("worker-b")
         assert reclaimed["status"] == "running"
         assert reclaimed["attempts"] == 2
+    finally:
+        recovered_store.close()
+
+
+def test_executor_does_not_auto_retry_an_uncertain_provider_write(tmp_path):
+    path = tmp_path / "uncertain-write.json"
+    first_store = sspanel.SspanelExecutorStore(str(path))
+    try:
+        account_id = first_store.import_account(sspanel.ImportSessionRequest(username="uncertain_user"))["executorAccountId"]
+        request = sspanel.JobStartRequest(
+            idempotencyKey="instagram:worker:uncertain-write:1",
+            orderId=1,
+            platform="instagram",
+            actionType="instagram.comments.reply",
+            quantity=1,
+            accountSelector={"mode": "specific", "accountIds": [account_id]},
+            payload={"mediaId": "media-1", "text": "reply"},
+        )
+        created = first_store.create_job(request)
+        claimed = first_store.claim_next_job("worker-a")
+        assert claimed["status"] == "running"
+        first_store.update_job(created["jobId"], {"providerCallStartedAt": sspanel._utc_now()})
+    finally:
+        first_store.close()
+
+    recovered_store = sspanel.SspanelExecutorStore(str(path))
+    try:
+        assert recovered_store.recover_jobs("worker-b") == 1
+        recovered = recovered_store.find_job(created["jobId"])
+        assert recovered["status"] == "paused"
+        assert recovered["pauseReason"] == "write_reconciliation_required"
+        assert recovered["errorCode"] == "WRITE_RECONCILIATION_REQUIRED"
+        with pytest.raises(HTTPException) as error:
+            recovered_store.resume_job(created["jobId"])
+        assert error.value.status_code == 409
+
+        resumed = recovered_store.resume_job(created["jobId"], confirm_provider_retry=True)
+        assert resumed["status"] == "queued"
+        assert resumed["pauseReason"] is None
     finally:
         recovered_store.close()
 

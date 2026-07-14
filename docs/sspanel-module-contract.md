@@ -42,6 +42,19 @@ uv run ruff check aiograpi_rest tests
 5. Add contract, idempotency, restart, policy, lease, error, and redaction
    tests before advertising it in the manifest.
 
+The Instagram reference module currently advertises these direct capabilities:
+
+- account health, profile lookup, comments list/reply/delete/pin;
+- photo/video/reel/story upload;
+- DM inbox/send/reply;
+- basic account or media insights.
+
+Media operations accept an HTTP(S) `mediaUrl`; the executor downloads it into
+private temporary storage, enforces `SSPANEL_MEDIA_MAX_BYTES`, and removes it
+after the provider call. Direct writes use one active account lease and a
+durable provider-call marker so an executor restart never silently retries an
+unknown write outcome.
+
 The module does not import SS-panel business logic. Product pricing, user
 entitlements, funnel prompts, and AI scenario resolution stay in the panel or
 its content boundary.

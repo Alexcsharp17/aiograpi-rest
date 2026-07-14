@@ -12,6 +12,7 @@ services:
     environment:
       AIOGRAPI_REST_DB_PATH: /data/db.json
       SSPANEL_EXECUTOR_ENCRYPTION_KEY: ${SSPANEL_EXECUTOR_ENCRYPTION_KEY:?set a urlsafe-base64 32-byte key}
+      SSPANEL_MEDIA_MAX_BYTES: ${SSPANEL_MEDIA_MAX_BYTES:-52428800}
     volumes:
       - .:/app
       - aiograpi_data:/data

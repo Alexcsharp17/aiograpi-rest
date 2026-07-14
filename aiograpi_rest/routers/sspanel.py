@@ -2,10 +2,12 @@ import asyncio
 import contextlib
 import hashlib
 import hmac
+import ipaddress
 import json
 import logging
 import math
 import os
+import tempfile
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -301,6 +303,16 @@ def _jsonable(value: Any) -> Any:
     return str(value)
 
 
+def _result_identifier(value: Any, *keys: str) -> Optional[str]:
+    if not isinstance(value, dict):
+        return None
+    for key in keys:
+        candidate = value.get(key)
+        if candidate is not None and str(candidate).strip():
+            return str(candidate)
+    return None
+
+
 def _exception_status(error: Exception) -> JobStatus:
     if isinstance(
         error,
@@ -361,6 +373,70 @@ def _safe_error_message(error: Exception) -> str:
     return message[:500]
 
 
+def _media_max_bytes() -> int:
+    try:
+        configured = int(os.getenv("SSPANEL_MEDIA_MAX_BYTES", str(50 * 1024 * 1024)))
+    except ValueError:
+        configured = 50 * 1024 * 1024
+    return max(1 * 1024 * 1024, min(configured, 500 * 1024 * 1024))
+
+
+def _validate_external_media_url(url: str) -> str:
+    parsed = urlsplit(url.strip())
+    hostname = (parsed.hostname or "").lower()
+    if parsed.scheme not in {"http", "https"} or not hostname or parsed.username or parsed.password:
+        raise ValueError("media URL must be an HTTP(S) URL without embedded credentials")
+    if hostname in {"localhost", "localhost.localdomain"}:
+        raise ValueError("media URL host is not publicly reachable")
+    try:
+        address = ipaddress.ip_address(hostname)
+    except ValueError:
+        address = None
+    if address and (address.is_private or address.is_loopback or address.is_link_local or address.is_reserved or address.is_unspecified):
+        raise ValueError("media URL host is not publicly reachable")
+    return url.strip()
+
+
+def _download_media_to_temp(url: str, default_suffix: str) -> Path:
+    """Fetch one approved media URL into executor-only temporary storage."""
+    url = _validate_external_media_url(url)
+    parsed = urlsplit(url)
+    suffix = Path(parsed.path).suffix.lower()
+    if len(suffix) > 10 or not suffix.replace(".", "").isalnum():
+        suffix = default_suffix
+    temporary_path: Optional[Path] = None
+    response = None
+    try:
+        response = requests.get(url, stream=True, timeout=30, allow_redirects=True)
+        response.raise_for_status()
+        content_length = response.headers.get("content-length") if getattr(response, "headers", None) else None
+        if content_length and int(content_length) > _media_max_bytes():
+            raise ValueError("media file exceeds executor size limit")
+        with tempfile.NamedTemporaryFile(prefix="sspanel-media-", suffix=suffix, delete=False) as stream:
+            temporary_path = Path(stream.name)
+            total = 0
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if not chunk:
+                    continue
+                total += len(chunk)
+                if total > _media_max_bytes():
+                    raise ValueError("media file exceeds executor size limit")
+                stream.write(chunk)
+        return temporary_path
+    except Exception:
+        if temporary_path:
+            temporary_path.unlink(missing_ok=True)
+        raise
+    finally:
+        if response is not None and hasattr(response, "close"):
+            response.close()
+
+
+def _remove_temp_path(path: Optional[Path]) -> None:
+    if path:
+        path.unlink(missing_ok=True)
+
+
 def create_instagram_health_client(account: dict[str, Any]) -> Client:
     client = Client()
     settings = account.get("settings")
@@ -379,6 +455,21 @@ def create_instagram_profile_client(account: dict[str, Any]) -> Client:
 
 def create_instagram_comments_client(account: dict[str, Any]) -> Client:
     """Build the platform client for comment capabilities."""
+    return create_instagram_health_client(account)
+
+
+def create_instagram_media_client(account: dict[str, Any]) -> Client:
+    """Build the platform client for media and story capabilities."""
+    return create_instagram_health_client(account)
+
+
+def create_instagram_direct_client(account: dict[str, Any]) -> Client:
+    """Build the platform client for direct-message capabilities."""
+    return create_instagram_health_client(account)
+
+
+def create_instagram_insights_client(account: dict[str, Any]) -> Client:
+    """Build the platform client for insights capabilities."""
     return create_instagram_health_client(account)
 
 
@@ -455,6 +546,84 @@ class ExecutorPolicyEnvelope(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+def _validate_http_media_url(value: str) -> str:
+    return _validate_external_media_url(value)
+
+
+class MediaUploadPayload(BaseModel):
+    mediaUrl: str = Field(..., min_length=1)
+    caption: str = Field(default="", max_length=2200)
+    thumbnailUrl: Optional[str] = Field(default=None, min_length=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+    _validate_media_url = field_validator("mediaUrl", "thumbnailUrl")(_validate_http_media_url)
+
+
+class StoryUploadPayload(MediaUploadPayload):
+    mediaType: Literal["photo", "video"]
+
+
+class CommentModerationPayload(BaseModel):
+    mediaId: str = Field(..., min_length=1)
+    commentIds: list[str | int] = Field(..., min_length=1, max_length=100)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("commentIds")
+    @classmethod
+    def validate_comment_ids(cls, value: list[str | int]) -> list[str | int]:
+        if any(isinstance(item, bool) or not str(item).isdigit() for item in value):
+            raise ValueError("commentIds must contain numeric IDs")
+        return value
+
+
+class DmInboxPayload(BaseModel):
+    amount: int = Field(default=20, ge=1, le=100)
+    selectedFilter: Optional[Literal["flagged", "unread"]] = None
+    box: Optional[Literal["primary", "general"]] = None
+    threadMessageLimit: Optional[int] = Field(default=None, ge=1, le=50)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class DmSendPayload(BaseModel):
+    text: str = Field(..., min_length=1, max_length=10000)
+    userIds: Optional[list[str | int]] = Field(default=None, min_length=1, max_length=100)
+    threadIds: Optional[list[str | int]] = Field(default=None, min_length=1, max_length=100)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_targets(self) -> "DmSendPayload":
+        if bool(self.userIds) == bool(self.threadIds):
+            raise ValueError("exactly one of userIds or threadIds is required")
+        targets = self.userIds or self.threadIds or []
+        if any(isinstance(item, bool) or not str(item).isdigit() for item in targets):
+            raise ValueError("DM target IDs must be numeric")
+        return self
+
+
+class DmReplyPayload(BaseModel):
+    threadId: str | int
+    text: str = Field(..., min_length=1, max_length=10000)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("threadId")
+    @classmethod
+    def validate_thread_id(cls, value: str | int) -> str | int:
+        if isinstance(value, bool) or not str(value).isdigit():
+            raise ValueError("threadId must be numeric")
+        return value
+
+
+class InsightsPayload(BaseModel):
+    mediaId: Optional[str] = Field(default=None, min_length=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class JobStartRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -467,6 +636,42 @@ class JobStartRequest(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict)
     policyEnvelope: Optional[ExecutorPolicyEnvelope] = None
     callbackUrl: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_typed_payload(self) -> "JobStartRequest":
+        validators = {
+            "instagram.media.upload.photo": MediaUploadPayload,
+            "instagram.media.upload.video": MediaUploadPayload,
+            "instagram.media.upload.reel": MediaUploadPayload,
+            "instagram.story.upload": StoryUploadPayload,
+            "instagram.comments.delete": CommentModerationPayload,
+            "instagram.comments.pin": CommentModerationPayload,
+            "instagram.dm.inbox": DmInboxPayload,
+            "instagram.dm.send": DmSendPayload,
+            "instagram.dm.reply": DmReplyPayload,
+            "instagram.insights.basic": InsightsPayload,
+        }
+        payload_model = validators.get(self.actionType)
+        if payload_model:
+            payload_model.model_validate(self.payload)
+        if self.actionType in {
+            "instagram.account.health",
+            "instagram.profile.get",
+            "instagram.media.upload.photo",
+            "instagram.media.upload.video",
+            "instagram.media.upload.reel",
+            "instagram.story.upload",
+            "instagram.comments.list",
+            "instagram.comments.reply",
+            "instagram.comments.delete",
+            "instagram.comments.pin",
+            "instagram.dm.inbox",
+            "instagram.dm.send",
+            "instagram.dm.reply",
+            "instagram.insights.basic",
+        } and self.quantity != 1:
+            raise ValueError("this Instagram capability accepts quantity=1")
+        return self
 
     @field_validator("callbackUrl")
     @classmethod
@@ -727,11 +932,28 @@ class SspanelExecutorStore:
         self.release_account_leases(job_id)
         return paused
 
-    def resume_job(self, job_id: str) -> dict[str, Any]:
+    def resume_job(self, job_id: str, confirm_provider_retry: bool = False) -> dict[str, Any]:
         job = self.find_job(job_id)
         if not job:
             raise HTTPException(status_code=404, detail="SS-panel executor job not found")
         if job.get("status") != "paused" or job.get("pauseReason") != "operator":
+            if job.get("pauseReason") == "write_reconciliation_required" and not confirm_provider_retry:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Provider write outcome is unknown; explicit confirmProviderRetry is required",
+                )
+            if job.get("pauseReason") == "write_reconciliation_required" and confirm_provider_retry:
+                return self.update_job(
+                    job_id,
+                    {
+                        "status": "queued",
+                        "pauseReason": None,
+                        "providerCallStartedAt": None,
+                        "errorCode": None,
+                        "errorMessage": None,
+                        "nextRunAt": _utc_now(),
+                    },
+                )
             return job
         return self.update_job(
             job_id,
@@ -994,6 +1216,31 @@ class SspanelExecutorStore:
             if job.get("workerId") == worker_id and _is_active_lease(job.get("workerLeaseExpiresAt")):
                 continue
             self.release_account_leases(job["jobId"])
+            if job.get("providerCallStartedAt") and job.get("actionType") in WRITE_ACTIONS:
+                self.jobs.update(
+                    {
+                        "status": "paused",
+                        "pauseReason": "write_reconciliation_required",
+                        "workerId": None,
+                        "workerLeaseExpiresAt": None,
+                        "nextRunAt": None,
+                        "recoveredAt": _utc_now(),
+                        "errorCode": "WRITE_RECONCILIATION_REQUIRED",
+                        "errorMessage": "Provider write outcome is unknown after executor restart",
+                        "updatedAt": _utc_now(),
+                    },
+                    Query().jobId == job["jobId"],
+                )
+                self.append_event(
+                    job["jobId"],
+                    "workflow.paused",
+                    action_type=job.get("actionType"),
+                    status="paused",
+                    error_code="WRITE_RECONCILIATION_REQUIRED",
+                    error_message="Provider write outcome is unknown after executor restart",
+                )
+                recovered += 1
+                continue
             self.jobs.update(
                 {
                     "status": "queued",
@@ -1284,7 +1531,22 @@ class ExecutorWorker:
         heartbeat = asyncio.create_task(self._heartbeat(job["jobId"]), name=f"{MODULE_ID}-lease-heartbeat")
         try:
             request = request_from_job(job)
+            if request.actionType in WRITE_ACTIONS:
+                self.store.update_job(
+                    job["jobId"],
+                    {
+                        "providerCallStartedAt": _utc_now(),
+                        "providerAttempt": int(job.get("providerAttempt", 0)) + 1,
+                    },
+                )
             await execute_supported_job(job, request, self.store)
+            self.store.update_job(
+                job["jobId"],
+                {
+                    "providerCallStartedAt": None,
+                    "lastProviderCallAt": _utc_now(),
+                },
+            )
             current = self.store.find_job(job["jobId"])
             completed_delta = max(
                 0,
@@ -1295,11 +1557,24 @@ class ExecutorWorker:
             action_metadata = {}
             target_ref = None
             if isinstance(current_result, dict):
-                for key in ("phase", "mediaId", "commentId", "publishedCandidateIds", "failedCandidateIds"):
+                for key in (
+                    "phase",
+                    "mediaId",
+                    "commentId",
+                    "threadId",
+                    "messageId",
+                    "affectedCommentIds",
+                    "publishedCandidateIds",
+                    "failedCandidateIds",
+                ):
                     if key in current_result:
                         action_metadata[key] = current_result[key]
                 if isinstance(current_result.get("mediaId"), str):
                     target_ref = current_result["mediaId"]
+                elif isinstance(current_result.get("threadId"), str):
+                    target_ref = current_result["threadId"]
+                elif isinstance(current_result.get("messageId"), str):
+                    target_ref = current_result["messageId"]
             if completed_delta > 0:
                 usage_metric = _usage_metric(request.actionType)
                 self.store.append_event(
@@ -1346,6 +1621,7 @@ class ExecutorWorker:
                     "status": "failed",
                     "errorCode": "executor_worker_error",
                     "errorMessage": _safe_error_message(error),
+                    "providerCallStartedAt": None,
                 },
             )
         finally:
@@ -1736,6 +2012,312 @@ async def execute_comments_reply_job(
         )
 
 
+async def execute_media_upload_job(
+    job: dict[str, Any],
+    request: JobStartRequest,
+    store: SspanelExecutorStore,
+) -> dict[str, Any]:
+    if request.actionType not in {
+        "instagram.media.upload.photo",
+        "instagram.media.upload.video",
+        "instagram.media.upload.reel",
+        "instagram.story.upload",
+    }:
+        return job
+    account = store.resolve_specific_account(request)
+    if not account:
+        return job
+
+    media_path: Optional[Path] = None
+    thumbnail_path: Optional[Path] = None
+    try:
+        payload_model: MediaUploadPayload | StoryUploadPayload
+        if request.actionType == "instagram.story.upload":
+            payload_model = StoryUploadPayload.model_validate(request.payload)
+        else:
+            payload_model = MediaUploadPayload.model_validate(request.payload)
+        media_path = _download_media_to_temp(payload_model.mediaUrl, ".mp4" if request.actionType in {
+            "instagram.media.upload.video",
+            "instagram.media.upload.reel",
+        } or getattr(payload_model, "mediaType", None) == "video" else ".jpg")
+        if payload_model.thumbnailUrl:
+            thumbnail_path = _download_media_to_temp(payload_model.thumbnailUrl, ".jpg")
+
+        client = create_instagram_media_client(account)
+        if account.get("sessionid") and not account.get("settings") and hasattr(client, "login_by_sessionid"):
+            await client.login_by_sessionid(account["sessionid"])
+        caption = payload_model.caption
+        if request.actionType == "instagram.media.upload.photo":
+            media = await client.photo_upload(media_path, caption)
+            result_key = "media"
+        elif request.actionType == "instagram.media.upload.video":
+            media = await client.video_upload(media_path, caption, thumbnail=thumbnail_path)
+            result_key = "media"
+        elif request.actionType == "instagram.media.upload.reel":
+            media = await client.clip_upload(media_path, caption, thumbnail=thumbnail_path)
+            result_key = "media"
+        elif payload_model.mediaType == "photo":
+            media = await client.photo_upload_to_story(media_path, caption)
+            result_key = "story"
+        else:
+            media = await client.video_upload_to_story(media_path, caption, thumbnail=thumbnail_path)
+            result_key = "story"
+
+        normalized = _redact(_jsonable(media))
+        media_id = _result_identifier(normalized, "pk", "id", "media_id")
+        return store.update_job(
+            job["jobId"],
+            {
+                "status": "completed",
+                "completedCount": 1,
+                "totalCount": 1,
+                "result": {
+                    result_key: normalized if isinstance(normalized, dict) else {"value": normalized},
+                    "executorAccountId": account["executorAccountId"],
+                    **({"mediaId": media_id} if media_id else {}),
+                },
+                "accountHealth": {"executorAccountId": account["executorAccountId"], "status": "healthy"},
+            },
+        )
+    except Exception as error:
+        external_status = _exception_status(error)
+        return store.update_job(
+            job["jobId"],
+            {
+                "status": external_status,
+                "completedCount": 0,
+                "totalCount": 1,
+                "errorCode": external_status,
+                "errorMessage": _safe_error_message(error),
+                "result": {},
+                "accountHealth": {"executorAccountId": account["executorAccountId"], "status": external_status},
+            },
+        )
+    finally:
+        _remove_temp_path(media_path)
+        _remove_temp_path(thumbnail_path)
+
+
+async def execute_comments_moderation_job(
+    job: dict[str, Any],
+    request: JobStartRequest,
+    store: SspanelExecutorStore,
+) -> dict[str, Any]:
+    if request.actionType not in {"instagram.comments.delete", "instagram.comments.pin"}:
+        return job
+    account = store.resolve_specific_account(request)
+    if not account:
+        return job
+
+    try:
+        payload = CommentModerationPayload.model_validate(request.payload)
+        comment_ids = [str(comment_id) for comment_id in payload.commentIds]
+        client = create_instagram_comments_client(account)
+        if account.get("sessionid") and not account.get("settings") and hasattr(client, "login_by_sessionid"):
+            await client.login_by_sessionid(account["sessionid"])
+        if request.actionType == "instagram.comments.delete":
+            success = await client.comment_bulk_delete(payload.mediaId, [int(comment_id) for comment_id in comment_ids])
+        else:
+            success = True
+            for comment_id in comment_ids:
+                success = bool(await client.comment_pin(payload.mediaId, int(comment_id))) and success
+        if not success:
+            raise RuntimeError("Instagram comment moderation operation was not accepted")
+        return store.update_job(
+            job["jobId"],
+            {
+                "status": "completed",
+                "completedCount": len(comment_ids),
+                "totalCount": len(comment_ids),
+                "result": {
+                    "mediaId": payload.mediaId,
+                    "affectedCommentIds": comment_ids,
+                    "executorAccountId": account["executorAccountId"],
+                },
+                "accountHealth": {"executorAccountId": account["executorAccountId"], "status": "healthy"},
+            },
+        )
+    except Exception as error:
+        external_status = _exception_status(error)
+        return store.update_job(
+            job["jobId"],
+            {
+                "status": external_status,
+                "completedCount": 0,
+                "totalCount": len(request.payload.get("commentIds", [])) or 1,
+                "errorCode": external_status,
+                "errorMessage": _safe_error_message(error),
+                "result": {},
+                "accountHealth": {"executorAccountId": account["executorAccountId"], "status": external_status},
+            },
+        )
+
+
+async def execute_dm_inbox_job(
+    job: dict[str, Any],
+    request: JobStartRequest,
+    store: SspanelExecutorStore,
+) -> dict[str, Any]:
+    if request.actionType != "instagram.dm.inbox":
+        return job
+    account = store.resolve_specific_account(request)
+    if not account:
+        return job
+
+    try:
+        payload = DmInboxPayload.model_validate(request.payload)
+        client = create_instagram_direct_client(account)
+        if account.get("sessionid") and not account.get("settings") and hasattr(client, "login_by_sessionid"):
+            await client.login_by_sessionid(account["sessionid"])
+        threads = await client.direct_threads(
+            amount=payload.amount,
+            selected_filter=payload.selectedFilter or "",
+            box=payload.box or "",
+            thread_message_limit=payload.threadMessageLimit,
+        )
+        normalized = _redact(_jsonable(threads))
+        return store.update_job(
+            job["jobId"],
+            {
+                "status": "completed",
+                "completedCount": 1,
+                "totalCount": 1,
+                "result": {
+                    "threads": normalized if isinstance(normalized, list) else [],
+                    "executorAccountId": account["executorAccountId"],
+                },
+                "accountHealth": {"executorAccountId": account["executorAccountId"], "status": "healthy"},
+            },
+        )
+    except Exception as error:
+        external_status = _exception_status(error)
+        return store.update_job(
+            job["jobId"],
+            {
+                "status": external_status,
+                "completedCount": 0,
+                "totalCount": 1,
+                "errorCode": external_status,
+                "errorMessage": _safe_error_message(error),
+                "result": {},
+                "accountHealth": {"executorAccountId": account["executorAccountId"], "status": external_status},
+            },
+        )
+
+
+async def execute_dm_send_job(
+    job: dict[str, Any],
+    request: JobStartRequest,
+    store: SspanelExecutorStore,
+) -> dict[str, Any]:
+    if request.actionType not in {"instagram.dm.send", "instagram.dm.reply"}:
+        return job
+    account = store.resolve_specific_account(request)
+    if not account:
+        return job
+
+    try:
+        client = create_instagram_direct_client(account)
+        if account.get("sessionid") and not account.get("settings") and hasattr(client, "login_by_sessionid"):
+            await client.login_by_sessionid(account["sessionid"])
+        if request.actionType == "instagram.dm.send":
+            payload = DmSendPayload.model_validate(request.payload)
+            message = await client.direct_send(
+                payload.text,
+                user_ids=[int(user_id) for user_id in payload.userIds or []],
+                thread_ids=[int(thread_id) for thread_id in payload.threadIds or []],
+            )
+        else:
+            payload = DmReplyPayload.model_validate(request.payload)
+            message = await client.direct_answer(int(payload.threadId), payload.text)
+        normalized = _redact(_jsonable(message))
+        message_id = _result_identifier(normalized, "pk", "id", "message_id", "messageId")
+        thread_id = _result_identifier(normalized, "thread_id", "threadId")
+        return store.update_job(
+            job["jobId"],
+            {
+                "status": "completed",
+                "completedCount": 1,
+                "totalCount": 1,
+                "result": {
+                    "message": normalized if isinstance(normalized, dict) else {"value": normalized},
+                    "executorAccountId": account["executorAccountId"],
+                    **({"messageId": message_id} if message_id else {}),
+                    **({"threadId": thread_id} if thread_id else {}),
+                },
+                "accountHealth": {"executorAccountId": account["executorAccountId"], "status": "healthy"},
+            },
+        )
+    except Exception as error:
+        external_status = _exception_status(error)
+        return store.update_job(
+            job["jobId"],
+            {
+                "status": external_status,
+                "completedCount": 0,
+                "totalCount": 1,
+                "errorCode": external_status,
+                "errorMessage": _safe_error_message(error),
+                "result": {},
+                "accountHealth": {"executorAccountId": account["executorAccountId"], "status": external_status},
+            },
+        )
+
+
+async def execute_insights_job(
+    job: dict[str, Any],
+    request: JobStartRequest,
+    store: SspanelExecutorStore,
+) -> dict[str, Any]:
+    if request.actionType != "instagram.insights.basic":
+        return job
+    account = store.resolve_specific_account(request)
+    if not account:
+        return job
+
+    try:
+        payload = InsightsPayload.model_validate(request.payload)
+        client = create_instagram_insights_client(account)
+        if account.get("sessionid") and not account.get("settings") and hasattr(client, "login_by_sessionid"):
+            await client.login_by_sessionid(account["sessionid"])
+        if payload.mediaId:
+            insights = await client.insights_media(payload.mediaId)
+            scope = "media"
+        else:
+            insights = await client.insights_account()
+            scope = "account"
+        normalized = _redact(_jsonable(insights))
+        return store.update_job(
+            job["jobId"],
+            {
+                "status": "completed",
+                "completedCount": 1,
+                "totalCount": 1,
+                "result": {
+                    "scope": scope,
+                    "insights": normalized if isinstance(normalized, dict) else {"value": normalized},
+                    "executorAccountId": account["executorAccountId"],
+                    **({"mediaId": payload.mediaId} if payload.mediaId else {}),
+                },
+                "accountHealth": {"executorAccountId": account["executorAccountId"], "status": "healthy"},
+            },
+        )
+    except Exception as error:
+        external_status = _exception_status(error)
+        return store.update_job(
+            job["jobId"],
+            {
+                "status": external_status,
+                "completedCount": 0,
+                "totalCount": 1,
+                "errorCode": external_status,
+                "errorMessage": _safe_error_message(error),
+                "result": {},
+                "accountHealth": {"executorAccountId": account["executorAccountId"], "status": external_status},
+            },
+        )
+
+
 async def execute_instagram_warmup_job(
     job: dict[str, Any],
     request: JobStartRequest,
@@ -2051,12 +2633,27 @@ async def execute_supported_job(
         return await execute_account_health_job(job, request, store)
     if request.actionType == "instagram.profile.get":
         return await execute_profile_get_job(job, request, store)
+    if request.actionType in {
+        "instagram.media.upload.photo",
+        "instagram.media.upload.video",
+        "instagram.media.upload.reel",
+        "instagram.story.upload",
+    }:
+        return await execute_media_upload_job(job, request, store)
     if request.actionType == "instagram.comments.list":
         return await execute_comments_list_job(job, request, store)
     if request.actionType == "instagram.warmup":
         return await execute_instagram_warmup_job(job, request, store)
     if request.actionType == "instagram.comments.reply":
         return await execute_comments_reply_job(job, request, store)
+    if request.actionType in {"instagram.comments.delete", "instagram.comments.pin"}:
+        return await execute_comments_moderation_job(job, request, store)
+    if request.actionType == "instagram.dm.inbox":
+        return await execute_dm_inbox_job(job, request, store)
+    if request.actionType in {"instagram.dm.send", "instagram.dm.reply"}:
+        return await execute_dm_send_job(job, request, store)
+    if request.actionType == "instagram.insights.basic":
+        return await execute_insights_job(job, request, store)
     if request.actionType == "instagram.comments.smart_reply":
         if job.get("workflowInput"):
             input_request = WorkflowInputRequest.model_validate(job["workflowInput"])
@@ -2177,8 +2774,12 @@ async def pause_job(job_id: str, store: SspanelExecutorStore = Depends(get_store
     response_model_exclude_none=True,
     dependencies=[Depends(require_sspanel_scope("jobs:write"))],
 )
-async def resume_job(job_id: str, store: SspanelExecutorStore = Depends(get_store)) -> JobProgressResponse:
-    job = store.resume_job(job_id)
+async def resume_job(
+    job_id: str,
+    confirmProviderRetry: bool = False,
+    store: SspanelExecutorStore = Depends(get_store),
+) -> JobProgressResponse:
+    job = store.resume_job(job_id, confirm_provider_retry=confirmProviderRetry)
     start_worker(store)
     return JobProgressResponse(
         jobId=job["jobId"],

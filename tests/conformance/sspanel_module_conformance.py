@@ -20,6 +20,22 @@ async def assert_sspanel_module_conformance(client: Any, api_key: str) -> None:
     assert "instagram" == manifest["platform"]
     assert manifest["contractVersions"]
     assert manifest["capabilities"]
+    assert {
+        "instagram.account.health",
+        "instagram.profile.get",
+        "instagram.comments.list",
+        "instagram.comments.reply",
+        "instagram.comments.delete",
+        "instagram.comments.pin",
+        "instagram.media.upload.photo",
+        "instagram.media.upload.video",
+        "instagram.media.upload.reel",
+        "instagram.story.upload",
+        "instagram.dm.inbox",
+        "instagram.dm.send",
+        "instagram.dm.reply",
+        "instagram.insights.basic",
+    }.issubset(set(manifest["capabilities"]))
     assert manifest["supportsPolling"] is True
 
     unsupported = await client.post(
@@ -29,7 +45,7 @@ async def assert_sspanel_module_conformance(client: Any, api_key: str) -> None:
             "idempotencyKey": "conformance:unsupported:v1",
             "orderId": 1,
             "platform": "instagram",
-            "actionType": "instagram.dm.send",
+            "actionType": "instagram.not_a_capability",
             "quantity": 1,
             "accountSelector": {"mode": "system"},
             "payload": {},

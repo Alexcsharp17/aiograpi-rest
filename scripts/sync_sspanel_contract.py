@@ -21,8 +21,8 @@ FIELDS = (
 
 def _default_schema_path() -> Path:
     executor_root = Path(__file__).resolve().parents[1]
-    workspace_root = executor_root.parents[1]
-    return workspace_root / "ss-toolkit" / "contracts" / "external-executor.schema.json"
+    modules_root = executor_root.parent
+    return modules_root / "ss-toolkit" / "contracts" / "external-executor.schema.json"
 
 
 def _enum_values(schema: dict[str, Any], field: str) -> list[str]:
