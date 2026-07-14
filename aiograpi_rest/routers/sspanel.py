@@ -70,6 +70,7 @@ CAPABILITY_INPUT_SCHEMAS: dict[str, dict[str, Any]] = {
         "properties": {
             "mediaIds": {"type": "array", "title": "Media IDs", "items": {"type": "string"}},
             "maxCandidates": {"type": "integer", "title": "Maximum candidates", "default": 1},
+            "scenarioRef": {"type": "string", "title": "Content scenario"},
         },
     },
     "instagram.comments.delete": {
@@ -146,6 +147,7 @@ CAPABILITY_INPUT_SCHEMAS: dict[str, dict[str, Any]] = {
         "properties": {
             "actionMix": {"type": "array", "title": "Action mix", "items": {"type": "string"}},
             "targetIds": {"type": "array", "title": "Target IDs", "items": {"type": "string"}},
+            "durationMinutes": {"type": "number", "title": "Duration (minutes)"},
         },
     },
 }
@@ -665,6 +667,113 @@ class ExecutorPolicyEnvelope(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class EmptyPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class ProfileGetPayload(BaseModel):
+    username: Optional[str] = Field(default=None, min_length=1)
+    userId: Optional[str | int] = None
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("userId")
+    @classmethod
+    def validate_user_id(cls, value: str | int | None) -> str | int | None:
+        if value is not None and (isinstance(value, bool) or not str(value).strip()):
+            raise ValueError("userId must be a non-empty string or integer")
+        return value
+
+    @model_validator(mode="after")
+    def validate_selectors(self) -> "ProfileGetPayload":
+        if self.username is not None and self.userId is not None:
+            raise ValueError("username and userId are mutually exclusive")
+        return self
+
+
+class CommentsListPayload(BaseModel):
+    mediaId: str = Field(..., min_length=1)
+    amount: int = Field(default=20, ge=1, le=100)
+    cursor: Optional[str] = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class CommentReplyPayload(BaseModel):
+    mediaId: str = Field(..., min_length=1)
+    text: str = Field(..., min_length=1, max_length=2200)
+    commentId: Optional[str | int] = None
+    repliedToCommentId: Optional[str | int] = None
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("commentId", "repliedToCommentId")
+    @classmethod
+    def validate_comment_id(cls, value: str | int | None) -> str | int | None:
+        if value is not None and (isinstance(value, bool) or not str(value).isdigit()):
+            raise ValueError("comment id must be numeric")
+        return value
+
+    @model_validator(mode="after")
+    def validate_comment_id_aliases(self) -> "CommentReplyPayload":
+        if (
+            self.commentId is not None
+            and self.repliedToCommentId is not None
+            and str(self.commentId) != str(self.repliedToCommentId)
+        ):
+            raise ValueError("commentId and repliedToCommentId must match when both are provided")
+        return self
+
+
+class SmartCommentsPayload(BaseModel):
+    mediaIds: list[str] = Field(..., min_length=1, max_length=20)
+    maxCandidates: int = Field(default=1, ge=1, le=100)
+    scenarioRef: Optional[str] = Field(default=None, min_length=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("mediaIds")
+    @classmethod
+    def validate_media_ids(cls, value: list[str]) -> list[str]:
+        if any(not media_id.strip() for media_id in value):
+            raise ValueError("mediaIds must contain non-empty strings")
+        return value
+
+
+class WarmupPayload(BaseModel):
+    actionMix: list[Literal[
+        "instagram.account.health",
+        "instagram.profile.get",
+        "instagram.comments.list",
+    ]] = Field(default_factory=lambda: ["instagram.account.health"])
+    targetIds: Optional[list[str]] = None
+    mediaIds: Optional[list[str]] = None
+    durationMinutes: Optional[float] = Field(default=None, gt=0)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("actionMix")
+    @classmethod
+    def validate_action_mix(cls, value: list[str]) -> list[str]:
+        if not value:
+            raise ValueError("actionMix must not be empty")
+        return value
+
+    @field_validator("targetIds", "mediaIds")
+    @classmethod
+    def validate_targets(cls, value: list[str] | None) -> list[str] | None:
+        if value is not None and any(not target.strip() for target in value):
+            raise ValueError("warmup targets must contain non-empty strings")
+        return value
+
+    @field_validator("durationMinutes", mode="before")
+    @classmethod
+    def reject_boolean_duration(cls, value: Any) -> Any:
+        if isinstance(value, bool):
+            raise ValueError("durationMinutes must be a positive number")
+        return value
+
+
 def _validate_http_media_url(value: str) -> str:
     return _validate_external_media_url(value)
 
@@ -759,6 +868,12 @@ class JobStartRequest(BaseModel):
     @model_validator(mode="after")
     def validate_typed_payload(self) -> "JobStartRequest":
         validators = {
+            "instagram.account.health": EmptyPayload,
+            "instagram.profile.get": ProfileGetPayload,
+            "instagram.comments.list": CommentsListPayload,
+            "instagram.comments.reply": CommentReplyPayload,
+            "instagram.comments.smart_reply": SmartCommentsPayload,
+            "instagram.warmup": WarmupPayload,
             "instagram.media.upload.photo": MediaUploadPayload,
             "instagram.media.upload.video": MediaUploadPayload,
             "instagram.media.upload.reel": MediaUploadPayload,
@@ -2125,10 +2240,10 @@ async def execute_comments_reply_job(
             raise ValueError("payload.text must be a non-empty string")
         if len(text) > 2200:
             raise ValueError("payload.text exceeds Instagram comment length limit")
-        replied_to = request.payload.get("repliedToCommentId")
+        replied_to = request.payload.get("commentId", request.payload.get("repliedToCommentId"))
         if replied_to is not None:
             if isinstance(replied_to, bool) or not str(replied_to).isdigit():
-                raise ValueError("payload.repliedToCommentId must be numeric")
+                raise ValueError("payload.commentId must be numeric")
             replied_to = int(replied_to)
 
         comment = await client.media_comment(media_id.strip(), text.strip(), replied_to)

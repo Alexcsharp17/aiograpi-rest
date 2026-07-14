@@ -562,7 +562,7 @@ async def test_sspanel_comments_reply_uses_idempotent_write_job_and_releases_lea
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         imported = await _import_session(client)
         account_id = imported.json()["executorAccountId"]
-        payload = {"mediaId": "media-1", "text": "Thanks", "repliedToCommentId": "11"}
+        payload = {"mediaId": "media-1", "text": "Thanks", "commentId": "11"}
         first = await _post_job(
             client,
             idempotency_key="instagram:comments:reply:1",
@@ -788,6 +788,30 @@ async def test_module_api_rejects_invalid_payload_for_advertised_capability():
             action_type="instagram.media.upload.photo",
             payload={},
             account_selector={"mode": "system"},
+        )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("action_type", "payload"),
+    [
+        ("instagram.account.health", {"unexpected": True}),
+        ("instagram.profile.get", {"username": "one", "userId": "2"}),
+        ("instagram.comments.list", {}),
+        ("instagram.comments.reply", {"mediaId": "media-1", "text": "reply", "commentId": "not-numeric"}),
+        ("instagram.comments.smart_reply", {"mediaIds": []}),
+        ("instagram.warmup", {"actionMix": ["instagram.not-a-warmup-action"]}),
+    ],
+)
+async def test_module_api_rejects_invalid_typed_payloads(action_type, payload):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await _post_job(
+            client,
+            idempotency_key=f"conformance:invalid:{action_type}:v1",
+            action_type=action_type,
+            payload=payload,
         )
 
     assert response.status_code == 422
