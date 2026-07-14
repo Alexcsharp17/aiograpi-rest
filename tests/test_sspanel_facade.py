@@ -799,10 +799,14 @@ async def test_module_api_rejects_invalid_payload_for_advertised_capability():
     [
         ("instagram.account.health", {"unexpected": True}),
         ("instagram.profile.get", {"username": "one", "userId": "2"}),
+        ("instagram.profile.get", {"username": " "}),
         ("instagram.comments.list", {}),
+        ("instagram.comments.list", {"mediaId": " "}),
         ("instagram.comments.reply", {"mediaId": "media-1", "text": "reply", "commentId": "not-numeric"}),
+        ("instagram.comments.reply", {"mediaId": "media-1", "text": " "}),
         ("instagram.comments.smart_reply", {"mediaIds": []}),
         ("instagram.warmup", {"actionMix": ["instagram.not-a-warmup-action"]}),
+        ("instagram.warmup", {"actionMix": ["instagram.comments.list"]}),
     ],
 )
 async def test_module_api_rejects_invalid_typed_payloads(action_type, payload):

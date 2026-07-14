@@ -671,11 +671,22 @@ class EmptyPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+def _validate_non_empty_text(value: str, field_name: str) -> str:
+    if not value.strip():
+        raise ValueError(f"{field_name} must be a non-empty string")
+    return value
+
+
 class ProfileGetPayload(BaseModel):
     username: Optional[str] = Field(default=None, min_length=1)
     userId: Optional[str | int] = None
 
     model_config = ConfigDict(extra="forbid")
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, value: str | None) -> str | None:
+        return _validate_non_empty_text(value, "username") if value is not None else None
 
     @field_validator("userId")
     @classmethod
@@ -698,6 +709,11 @@ class CommentsListPayload(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    @field_validator("mediaId")
+    @classmethod
+    def validate_media_id(cls, value: str) -> str:
+        return _validate_non_empty_text(value, "mediaId")
+
 
 class CommentReplyPayload(BaseModel):
     mediaId: str = Field(..., min_length=1)
@@ -706,6 +722,16 @@ class CommentReplyPayload(BaseModel):
     repliedToCommentId: Optional[str | int] = None
 
     model_config = ConfigDict(extra="forbid")
+
+    @field_validator("mediaId")
+    @classmethod
+    def validate_media_id(cls, value: str) -> str:
+        return _validate_non_empty_text(value, "mediaId")
+
+    @field_validator("text")
+    @classmethod
+    def validate_text(cls, value: str) -> str:
+        return _validate_non_empty_text(value, "text")
 
     @field_validator("commentId", "repliedToCommentId")
     @classmethod
@@ -766,6 +792,12 @@ class WarmupPayload(BaseModel):
             raise ValueError("warmup targets must contain non-empty strings")
         return value
 
+    @model_validator(mode="after")
+    def validate_action_targets(self) -> "WarmupPayload":
+        if "instagram.comments.list" in self.actionMix and not (self.targetIds or self.mediaIds):
+            raise ValueError("warmup comments.list action requires targetIds or mediaIds")
+        return self
+
     @field_validator("durationMinutes", mode="before")
     @classmethod
     def reject_boolean_duration(cls, value: Any) -> Any:
@@ -798,6 +830,11 @@ class CommentModerationPayload(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    @field_validator("mediaId")
+    @classmethod
+    def validate_media_id(cls, value: str) -> str:
+        return _validate_non_empty_text(value, "mediaId")
+
     @field_validator("commentIds")
     @classmethod
     def validate_comment_ids(cls, value: list[str | int]) -> list[str | int]:
@@ -822,6 +859,11 @@ class DmSendPayload(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    @field_validator("text")
+    @classmethod
+    def validate_text(cls, value: str) -> str:
+        return _validate_non_empty_text(value, "text")
+
     @model_validator(mode="after")
     def validate_targets(self) -> "DmSendPayload":
         if bool(self.userIds) == bool(self.threadIds):
@@ -838,6 +880,11 @@ class DmReplyPayload(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    @field_validator("text")
+    @classmethod
+    def validate_text(cls, value: str) -> str:
+        return _validate_non_empty_text(value, "text")
+
     @field_validator("threadId")
     @classmethod
     def validate_thread_id(cls, value: str | int) -> str | int:
@@ -850,6 +897,11 @@ class InsightsPayload(BaseModel):
     mediaId: Optional[str] = Field(default=None, min_length=1)
 
     model_config = ConfigDict(extra="forbid")
+
+    @field_validator("mediaId")
+    @classmethod
+    def validate_media_id(cls, value: str | None) -> str | None:
+        return _validate_non_empty_text(value, "mediaId") if value is not None else None
 
 
 class JobStartRequest(BaseModel):
