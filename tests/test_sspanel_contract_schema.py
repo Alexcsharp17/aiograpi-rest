@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from aiograpi_rest.routers.sspanel import CONTRACT_FIXTURE
 
 
@@ -22,7 +24,12 @@ def _schema_enum(schema, field):
 
 
 def test_executor_fixture_matches_canonical_schema():
-    schema = json.loads(_schema_path().read_text(encoding="utf-8"))
+    schema_path = _schema_path()
+    if not schema_path.is_file():
+        pytest.skip(
+            "canonical ss-toolkit schema is not mounted; run this assertion from the root checkout or CI contract job"
+        )
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
     fields = (
         "contractVersions",
         "platforms",
