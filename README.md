@@ -29,6 +29,10 @@ This checkout is used by SS-panel as `modules/aiograpi-rest` on branch
   secrets support the same `SSPANEL_EXECUTOR_API_KEY_FILE`,
   `SSPANEL_EXECUTOR_API_KEYS_FILE`, and `SSPANEL_CALLBACK_SECRET_FILE` pattern.
   Secret file read failures fail closed without logging the secret value.
+- When using the single legacy key (`SSPANEL_EXECUTOR_API_KEY`), set
+  `SSPANEL_EXECUTOR_API_KEY_ID` to the same identifier configured in the panel
+  (`INSTAGRAM_EXECUTOR_API_KEY_ID`). The structured
+  `SSPANEL_EXECUTOR_API_KEYS` keyring takes precedence when configured.
 - Deployments that use a remote secret manager can provide an adapter class via
   `SSPANEL_SECRET_PROVIDER_CLASS=package.module:ProviderClass`. The class is
   loaded during application startup, must implement `get(name)`, and is kept
