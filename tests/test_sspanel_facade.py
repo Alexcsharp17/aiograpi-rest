@@ -702,7 +702,9 @@ async def test_module_manifest_advertises_only_implemented_capabilities():
 
     assert unauthorized.status_code == 401
     assert response.status_code == 200
-    assert response.json() == {
+    body = response.json()
+    input_schemas = body.pop("inputSchemas")
+    assert body == {
         "moduleId": "instagram-executor",
         "platform": "instagram",
         "contractVersions": ["1.0", "1.1"],
@@ -735,6 +737,11 @@ async def test_module_manifest_advertises_only_implemented_capabilities():
         "supportsPolling": True,
         "supportsCallbacks": False,
     }
+    assert input_schemas["instagram.comments.reply"]["properties"]["mediaId"] == {
+        "type": "string",
+        "title": "Media ID",
+    }
+    assert input_schemas["instagram.story.upload"]["properties"]["mediaType"]["enum"] == ["photo", "video"]
 
 
 @pytest.mark.asyncio

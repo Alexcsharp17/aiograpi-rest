@@ -40,6 +40,116 @@ CONTRACT_FEATURES = tuple(CONTRACT_FIXTURE.get("moduleFeatures", []))
 IMPLEMENTED_CAPABILITIES = frozenset(CONTRACT_FIXTURE["instagramImplementedCapabilities"])
 IMPLEMENTED_WORKFLOW_TYPES = tuple(CONTRACT_FIXTURE.get("workflowTypes", []))
 
+CAPABILITY_INPUT_SCHEMAS: dict[str, dict[str, Any]] = {
+    "instagram.account.health": {"type": "object", "properties": {}},
+    "instagram.profile.get": {
+        "type": "object",
+        "properties": {
+            "username": {"type": "string", "title": "Username"},
+            "userId": {"type": "string", "title": "User ID"},
+        },
+    },
+    "instagram.comments.list": {
+        "type": "object",
+        "properties": {
+            "mediaId": {"type": "string", "title": "Media ID"},
+            "amount": {"type": "integer", "title": "Amount", "default": 20},
+            "cursor": {"type": "string", "title": "Cursor"},
+        },
+    },
+    "instagram.comments.reply": {
+        "type": "object",
+        "properties": {
+            "mediaId": {"type": "string", "title": "Media ID"},
+            "commentId": {"type": "string", "title": "Comment ID"},
+            "text": {"type": "string", "title": "Reply text"},
+        },
+    },
+    "instagram.comments.smart_reply": {
+        "type": "object",
+        "properties": {
+            "mediaIds": {"type": "array", "title": "Media IDs", "items": {"type": "string"}},
+            "maxCandidates": {"type": "integer", "title": "Maximum candidates", "default": 1},
+        },
+    },
+    "instagram.comments.delete": {
+        "type": "object",
+        "properties": {
+            "mediaId": {"type": "string", "title": "Media ID"},
+            "commentIds": {"type": "array", "title": "Comment IDs", "items": {"type": "string"}},
+        },
+    },
+    "instagram.comments.pin": {
+        "type": "object",
+        "properties": {
+            "mediaId": {"type": "string", "title": "Media ID"},
+            "commentIds": {"type": "array", "title": "Comment IDs", "items": {"type": "string"}},
+        },
+    },
+    "instagram.media.upload.photo": {
+        "type": "object",
+        "properties": {
+            "mediaUrl": {"type": "string", "title": "Media URL"},
+            "caption": {"type": "string", "title": "Caption"},
+        },
+    },
+    "instagram.media.upload.video": {
+        "type": "object",
+        "properties": {
+            "mediaUrl": {"type": "string", "title": "Media URL"},
+            "caption": {"type": "string", "title": "Caption"},
+            "thumbnailUrl": {"type": "string", "title": "Thumbnail URL"},
+        },
+    },
+    "instagram.media.upload.reel": {
+        "type": "object",
+        "properties": {
+            "mediaUrl": {"type": "string", "title": "Media URL"},
+            "caption": {"type": "string", "title": "Caption"},
+            "thumbnailUrl": {"type": "string", "title": "Thumbnail URL"},
+        },
+    },
+    "instagram.story.upload": {
+        "type": "object",
+        "properties": {
+            "mediaUrl": {"type": "string", "title": "Media URL"},
+            "mediaType": {"type": "string", "title": "Media type", "enum": ["photo", "video"]},
+        },
+    },
+    "instagram.dm.inbox": {
+        "type": "object",
+        "properties": {"amount": {"type": "integer", "title": "Amount", "default": 20}},
+    },
+    "instagram.dm.send": {
+        "type": "object",
+        "properties": {
+            "userId": {"type": "string", "title": "User ID"},
+            "text": {"type": "string", "title": "Message text"},
+        },
+    },
+    "instagram.dm.reply": {
+        "type": "object",
+        "properties": {
+            "threadId": {"type": "string", "title": "Thread ID"},
+            "text": {"type": "string", "title": "Message text"},
+        },
+    },
+    "instagram.insights.basic": {
+        "type": "object",
+        "properties": {
+            "scope": {"type": "string", "title": "Scope", "enum": ["account", "media"]},
+            "mediaId": {"type": "string", "title": "Media ID"},
+        },
+    },
+    "instagram.warmup": {
+        "type": "object",
+        "properties": {
+            "actionMix": {"type": "array", "title": "Action mix", "items": {"type": "string"}},
+            "targetIds": {"type": "array", "title": "Target IDs", "items": {"type": "string"}},
+        },
+    },
+}
+
 Platform = Literal["instagram"]
 JobStatus = Literal[
     "queued",
@@ -759,6 +869,7 @@ class ModuleManifestResponse(BaseModel):
     contractVersions: list[str]
     features: list[str]
     capabilities: list[ActionType]
+    inputSchemas: dict[str, dict[str, Any]]
     workflowTypes: list[str]
     supportsPolling: bool
     supportsCallbacks: bool
@@ -1753,6 +1864,11 @@ async def get_module_manifest() -> ModuleManifestResponse:
         contractVersions=list(CONTRACT_VERSIONS),
         features=features,
         capabilities=sorted(IMPLEMENTED_CAPABILITIES),
+        inputSchemas={
+            capability: CAPABILITY_INPUT_SCHEMAS[capability]
+            for capability in sorted(IMPLEMENTED_CAPABILITIES)
+            if capability in CAPABILITY_INPUT_SCHEMAS
+        },
         workflowTypes=list(IMPLEMENTED_WORKFLOW_TYPES),
         supportsPolling=True,
         supportsCallbacks=supports_callbacks,
