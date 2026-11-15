@@ -1,3 +1,4 @@
+import asyncio
 import tomllib
 from importlib.metadata import PackageNotFoundError
 from pathlib import Path
@@ -176,6 +177,39 @@ async def test_openapi_reports_app_version_200():
     assert "promo code" not in data["info"]["description"]
     assert "`7RAo9ACK`" not in data["info"]["description"]
     assert "externalDocs" not in data
+
+
+@pytest.mark.asyncio
+async def test_openapi_preserves_30_version_and_nullable_schema():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.get("/openapi.json")
+    assert response.status_code == 200
+    schema = response.json()
+    assert schema["openapi"] == "3.0.3"
+    extra_data = schema["components"]["schemas"]["DirectVideoUploadRequest"]["properties"]["extra_data"]
+    assert extra_data["nullable"] is True
+    assert {"type": "null"} not in extra_data.get("anyOf", [])
+
+
+@pytest.mark.asyncio
+async def test_app_lifespan_starts_and_stops_executor_worker(tmp_path, monkeypatch):
+    monkeypatch.setenv("SSPANEL_EXECUTOR_DB_PATH", str(tmp_path / "lifespan.sqlite3"))
+    monkeypatch.setenv("SSPANEL_EXECUTOR_ENCRYPTION_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+    main.sspanel.reset_store_for_tests()
+    try:
+        async with app.router.lifespan_context(app):
+            worker = main.sspanel._worker
+            assert worker is not None
+            assert worker.store.db.path == tmp_path / "lifespan.sqlite3"
+            assert worker.task is not None
+            await asyncio.sleep(0)
+            assert not worker.task.done()
+        await asyncio.sleep(0)
+        assert worker.stop_event.is_set()
+        assert worker.task.done()
+        assert main.sspanel._worker is None
+    finally:
+        main.sspanel.reset_store_for_tests()
 
 
 @pytest.mark.asyncio

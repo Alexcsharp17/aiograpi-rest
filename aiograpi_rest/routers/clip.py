@@ -102,7 +102,7 @@ async def clip_template(
 @router.get("/download")
 async def clip_download(sessionid: str = Depends(get_sessionid),
                          media_pk: int = Query(...),
-                         folder: Optional[Path] = Query(""),
+                         folder: Optional[Path] = Query(Path(".")),
                          returnFile: Optional[bool] = Query(True),
                          clients: ClientStorage = Depends(get_clients)):
     """Download CLIP video using media pk
@@ -119,7 +119,7 @@ async def clip_download(sessionid: str = Depends(get_sessionid),
 async def clip_download_by_url(sessionid: str = Depends(get_sessionid),
                          url: str = Query(...),
                          filename: Optional[str] = Query(""),
-                         folder: Optional[Path] = Query(""),
+                         folder: Optional[Path] = Query(Path(".")),
                          returnFile: Optional[bool] = Query(True),
                          clients: ClientStorage = Depends(get_clients)):
     """Download CLIP video using URL

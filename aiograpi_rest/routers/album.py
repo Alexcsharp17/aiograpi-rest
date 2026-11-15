@@ -28,7 +28,7 @@ EXTRA_DATA_FORM_DESCRIPTION = "JSON-encoded extra configure data. Leave empty to
 @router.get("/download", response_model=List[Path])
 async def album_download(sessionid: str = Depends(get_sessionid),
                          media_pk: int = Query(...),
-                         folder: Optional[Path] = Query(""),
+                         folder: Optional[Path] = Query(Path(".")),
                          clients: ClientStorage = Depends(get_clients)) -> List[Path]:
     """Download photo using media pk
     """
@@ -40,7 +40,7 @@ async def album_download(sessionid: str = Depends(get_sessionid),
 @router.get("/download/by/urls", response_model=List[Path])
 async def album_download_by_urls(sessionid: str = Depends(get_sessionid),
                          urls: List[str] = Query(...),
-                         folder: Optional[Path] = Query(""),
+                         folder: Optional[Path] = Query(Path(".")),
                          clients: ClientStorage = Depends(get_clients)) -> List[Path]:
     """Download photo using URL
     """

@@ -28,6 +28,7 @@ def _track_payload(track_id="track-1"):
 class FakeTrackClient:
     def __init__(self):
         self.calls = []
+        self.download_folders = []
 
     async def track_info_by_id(self, track_id, max_id=""):
         self.calls.append(("track_info_by_id", track_id, max_id))
@@ -43,6 +44,7 @@ class FakeTrackClient:
 
     async def track_download_by_url(self, url, filename="", folder=""):
         self.calls.append(("track_download_by_url", url, filename, str(folder)))
+        self.download_folders.append(folder)
         return Path(__file__).resolve()
 
     async def music_in_feed_audio_browser(self, browse_session_id=None):
@@ -202,3 +204,19 @@ async def test_track_music_routes_call_aiograpi_methods(storage):
     assert ("music_clips_audio_browser", "clips", "browser-4") in storage.client.calls
     assert ("music_bookmark", "audio-1", "clips") in storage.client.calls
     assert ("music_verify_original_audio_title", "Original title") in storage.client.calls
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("folder_query", "expected_folder"),
+    [(None, Path(".")), ("", Path(".")), ("downloads/audio", Path("downloads/audio"))],
+)
+async def test_track_download_preserves_typed_folder_defaults_and_explicit_queries(storage, folder_query, expected_folder):
+    params = {"sessionid": "sid", "url": "https://example.com/audio.mp3", "returnFile": "false"}
+    if folder_query is not None:
+        params["folder"] = folder_query
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.get("/track/download/by/url", params=params)
+    assert response.status_code == 200
+    assert storage.client.download_folders == [expected_folder]
+    assert isinstance(storage.client.download_folders[0], Path)
