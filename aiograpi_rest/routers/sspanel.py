@@ -1301,8 +1301,9 @@ class SspanelExecutorStore:
         error_message: Optional[str] = None,
         usage: Optional[dict[str, Any]] = None,
         metadata: Optional[dict[str, Any]] = None,
+        in_transaction: bool = False,
     ) -> dict[str, Any]:
-        with self.db.transaction():
+        with contextlib.nullcontext() if in_transaction else self.db.transaction():
             job = self.find_job(job_id)
             if not job:
                 raise HTTPException(status_code=404, detail="SS-panel executor job not found")
@@ -1402,6 +1403,10 @@ class SspanelExecutorStore:
         )
 
     def reserve_policy_capacity(self, request: JobStartRequest, job: dict[str, Any]) -> Optional[dict[str, Any]]:
+        with self.db.transaction():
+            return self._reserve_policy_capacity_in_transaction(request, job)
+
+    def _reserve_policy_capacity_in_transaction(self, request: JobStartRequest, job: dict[str, Any]) -> Optional[dict[str, Any]]:
         """Reserve the requested quantity against the immutable policy snapshot."""
         policy = request.policyEnvelope
         account_ids = sorted(set(request.accountSelector.accountIds or []))
@@ -1411,6 +1416,10 @@ class SspanelExecutorStore:
         if not limit:
             return None
 
+        persisted_job = self.find_job(job["jobId"])
+        if not persisted_job:
+            raise HTTPException(status_code=404, detail="SS-panel executor job not found")
+        job = persisted_job
         now = datetime.now(timezone.utc)
         current_reserved = int(job.get("policyReservedUnits", 0))
         desired_reserved = request.quantity
@@ -1429,49 +1438,48 @@ class SspanelExecutorStore:
             return None
 
         reservations: list[dict[str, Any]] = []
-        with self.db.transaction():
-            if additional_amount > 0:
-                for account_id in account_ids:
-                    for window, maximum, window_start, unit in windows:
-                        usage_key = f"{account_id}:{request.actionType}:{window}:{window_start}"
-                        row = self.usage.get(Query().usageKey == usage_key) or {"used": 0}
-                        used = int(row.get("used", 0))
-                        if used + additional_amount > maximum:
-                            next_run = now + timedelta(hours=1 if unit == "hour" else 24)
-                            return {
-                                "code": "POLICY_LIMIT_REACHED",
-                                "message": f"{window} policy limit reached for {request.actionType}",
-                                "nextRunAt": next_run.isoformat().replace("+00:00", "Z"),
-                            }
-                        reservations.append({
-                            "usageKey": usage_key,
-                            "accountId": account_id,
-                            "actionType": request.actionType,
-                            "window": window,
-                            "windowStart": window_start,
-                            "amount": additional_amount,
-                            "maximum": maximum,
-                        })
+        if additional_amount > 0:
+            for account_id in account_ids:
+                for window, maximum, window_start, unit in windows:
+                    usage_key = f"{account_id}:{request.actionType}:{window}:{window_start}"
+                    row = self.usage.get(Query().usageKey == usage_key) or {"used": 0}
+                    used = int(row.get("used", 0))
+                    if used + additional_amount > maximum:
+                        next_run = now + timedelta(hours=1 if unit == "hour" else 24)
+                        return {
+                            "code": "POLICY_LIMIT_REACHED",
+                            "message": f"{window} policy limit reached for {request.actionType}",
+                            "nextRunAt": next_run.isoformat().replace("+00:00", "Z"),
+                        }
+                    reservations.append({
+                        "usageKey": usage_key,
+                        "accountId": account_id,
+                        "actionType": request.actionType,
+                        "window": window,
+                        "windowStart": window_start,
+                        "amount": additional_amount,
+                        "maximum": maximum,
+                    })
 
-                for reservation in reservations:
-                    predicate = Query().usageKey == reservation["usageKey"]
-                    existing = self.usage.get(predicate)
-                    updated = {
-                        **(existing or {}),
-                        **reservation,
-                        "used": int((existing or {}).get("used", 0)) + additional_amount,
-                        "updatedAt": _utc_now(),
-                    }
-                    if existing:
-                        self.usage.update_in_transaction(updated, predicate)
-                    else:
-                        self.usage.insert_in_transaction(updated)
+            for reservation in reservations:
+                predicate = Query().usageKey == reservation["usageKey"]
+                existing = self.usage.get(predicate)
+                updated = {
+                    **(existing or {}),
+                    **reservation,
+                    "used": int((existing or {}).get("used", 0)) + additional_amount,
+                    "updatedAt": _utc_now(),
+                }
+                if existing:
+                    self.usage.update_in_transaction(updated, predicate)
+                else:
+                    self.usage.insert_in_transaction(updated)
 
-            if desired_reserved > current_reserved:
-                self.jobs.update_in_transaction(
-                    {"policyReservedUnits": desired_reserved, "updatedAt": _utc_now()},
-                    Query().jobId == job["jobId"],
-                )
+        if desired_reserved > current_reserved:
+            self.jobs.update_in_transaction(
+                {"policyReservedUnits": desired_reserved, "updatedAt": _utc_now()},
+                Query().jobId == job["jobId"],
+            )
 
         return {"reservedUnits": desired_reserved, "reservations": reservations}
 
@@ -1592,104 +1600,112 @@ class SspanelExecutorStore:
         return recovered
 
     def claim_next_job(self, worker_id: str) -> Optional[dict[str, Any]]:
-        """Atomically claim one due queued job for this process."""
+        """Atomically select, reserve capacity, and claim one due queued job."""
         candidates = [
             job
             for job in self.jobs.all()
             if job.get("status") == "queued" and _is_due(job.get("nextRunAt"))
         ]
         candidates.sort(key=lambda job: (job.get("acceptedAt", ""), job.get("jobId", "")))
-        for job in candidates:
-            if job.get("cancelRequested"):
-                self.cancel_job(job["jobId"])
-                continue
-            try:
-                request = request_from_job(job)
-                original_selector = job.get("accountSelector") or {}
-                if original_selector.get("mode") == "system" and not job.get("assignedAccountIds"):
-                    account = self.resolve_system_account(request, job_id=job["jobId"])
-                    if not account:
-                        updates = {
-                            "errorCode": "NO_EXECUTOR_ACCOUNT_AVAILABLE",
-                            "errorMessage": "No available Instagram executor account matches the system selector",
-                        }
-                        if self.has_system_account_pool(request):
-                            self.jobs.update(
-                                {**updates, "nextRunAt": _utc_after_seconds(_lease_ttl_seconds())},
-                                Query().jobId == job["jobId"],
-                            )
-                        else:
-                            self.update_job(
-                                job["jobId"],
-                                {**updates, "status": "failed", "nextRunAt": None},
-                            )
-                        continue
-                    self.jobs.update(
+        for candidate in candidates:
+            with self.db.transaction():
+                job = self.find_job(candidate["jobId"])
+                if not job or job.get("status") != "queued" or not _is_due(job.get("nextRunAt")):
+                    continue
+                if job.get("cancelRequested"):
+                    self.jobs.update_in_transaction(
                         {
-                            "assignedAccountIds": [account["executorAccountId"]],
-                            "lastSelectedAt": _utc_now(),
+                            "status": "cancelled",
+                            "cancelRequestedAt": _utc_now(),
+                            "workerLeaseExpiresAt": None,
+                            "updatedAt": _utc_now(),
                         },
                         Query().jobId == job["jobId"],
                     )
-                    job = self.find_job(job["jobId"]) or job
-                    request = request_from_job(job)
-                if request.actionType in WRITE_ACTIONS and request.accountSelector.mode == "specific":
-                    self.acquire_account_leases(
-                        sorted(set(request.accountSelector.accountIds or [])),
-                        job["jobId"],
+                    self._release_account_leases_in_transaction(job["jobId"])
+                    self.append_event(
+                        job["jobId"], "job.cancelled", action_type=job.get("actionType"),
+                        status="cancelled", in_transaction=True,
                     )
-            except HTTPException:
-                continue
+                    continue
+                try:
+                    request = request_from_job(job)
+                    original_selector = job.get("accountSelector") or {}
+                    if original_selector.get("mode") == "system" and not job.get("assignedAccountIds"):
+                        account = self.resolve_system_account(request, job_id=job["jobId"])
+                        if not account:
+                            updates = {
+                                "errorCode": "NO_EXECUTOR_ACCOUNT_AVAILABLE",
+                                "errorMessage": "No available Instagram executor account matches the system selector",
+                            }
+                            if self.has_system_account_pool(request):
+                                self.jobs.update_in_transaction(
+                                    {**updates, "nextRunAt": _utc_after_seconds(_lease_ttl_seconds())},
+                                    Query().jobId == job["jobId"],
+                                )
+                            else:
+                                self.jobs.update_in_transaction(
+                                    {**updates, "status": "failed", "nextRunAt": None, "updatedAt": _utc_now()},
+                                    Query().jobId == job["jobId"],
+                                )
+                                self._release_account_leases_in_transaction(job["jobId"])
+                                self.append_event(
+                                    job["jobId"], "job.failed", action_type=request.actionType,
+                                    status="failed", completed_count=job.get("completedCount", 0),
+                                    total_count=job.get("totalCount", 0), error_code=updates["errorCode"],
+                                    error_message=updates["errorMessage"], in_transaction=True,
+                                )
+                            continue
+                        assignment = {"assignedAccountIds": [account["executorAccountId"]], "lastSelectedAt": _utc_now()}
+                        self.jobs.update_in_transaction(assignment, Query().jobId == job["jobId"])
+                        job = {**job, **assignment}
+                        request = request_from_job(job)
+                    if request.actionType in WRITE_ACTIONS and request.accountSelector.mode == "specific":
+                        self._acquire_account_leases_in_transaction(
+                            sorted(set(request.accountSelector.accountIds or [])), job["jobId"],
+                        )
+                except HTTPException:
+                    continue
 
-            policy_block = self.activity_window_block(request)
-            if policy_block:
-                self.update_job(
-                    job["jobId"],
+                policy_result = self.activity_window_block(request)
+                if not policy_result:
+                    policy_result = self._reserve_policy_capacity_in_transaction(request, job)
+                if policy_result and policy_result.get("code"):
+                    self.jobs.update_in_transaction(
+                        {
+                            "status": "paused",
+                            "errorCode": policy_result["code"],
+                            "errorMessage": policy_result["message"],
+                            "nextRunAt": policy_result["nextRunAt"],
+                            "updatedAt": _utc_now(),
+                        },
+                        Query().jobId == job["jobId"],
+                    )
+                    self._release_account_leases_in_transaction(job["jobId"])
+                    self.append_event(
+                        job["jobId"], "workflow.paused", action_type=request.actionType, status="paused",
+                        completed_count=job.get("completedCount", 0), total_count=job.get("totalCount", 0),
+                        error_code=policy_result["code"], error_message=policy_result["message"], in_transaction=True,
+                    )
+                    continue
+
+                self.jobs.update_in_transaction(
                     {
-                        "status": "paused",
-                        "errorCode": policy_block["code"],
-                        "errorMessage": policy_block["message"],
-                        "nextRunAt": policy_block["nextRunAt"],
+                        "status": "running",
+                        "workerId": worker_id,
+                        "workerLeaseExpiresAt": _utc_after_seconds(_worker_lease_ttl_seconds()),
+                        "attempts": int(job.get("attempts", 0)) + 1,
+                        "startedAt": job.get("startedAt") or _utc_now(),
+                        "updatedAt": _utc_now(),
                     },
+                    Query().jobId == job["jobId"],
                 )
-                self.release_account_leases(job["jobId"])
-                continue
-
-            policy_block = self.reserve_policy_capacity(request, job)
-            if policy_block and policy_block.get("code") == "POLICY_LIMIT_REACHED":
-                self.update_job(
-                    job["jobId"],
-                    {
-                        "status": "paused",
-                        "errorCode": policy_block["code"],
-                        "errorMessage": policy_block["message"],
-                        "nextRunAt": policy_block["nextRunAt"],
-                    },
+                self.append_event(
+                    job["jobId"], "job.started", action_type=request.actionType, status="running",
+                    quantity=job.get("quantity"), total_count=job.get("totalCount"),
+                    metadata={"policyReservation": policy_result} if policy_result else {}, in_transaction=True,
                 )
-                self.release_account_leases(job["jobId"])
-                continue
-
-            expiry = _utc_after_seconds(_worker_lease_ttl_seconds())
-            claimed = {
-                **job,
-                "status": "running",
-                "workerId": worker_id,
-                "workerLeaseExpiresAt": expiry,
-                "attempts": int(job.get("attempts", 0)) + 1,
-                "startedAt": job.get("startedAt") or _utc_now(),
-                "updatedAt": _utc_now(),
-            }
-            self.jobs.update(claimed, Query().jobId == job["jobId"])
-            self.append_event(
-                job["jobId"],
-                "job.started",
-                action_type=job.get("actionType"),
-                status="running",
-                quantity=job.get("quantity"),
-                total_count=job.get("totalCount"),
-                metadata={"policyReservation": policy_block} if policy_block else {},
-            )
-            return self.find_job(job["jobId"]) or claimed
+                return self.find_job(job["jobId"])
         return None
 
     def renew_job_lease(self, job_id: str, worker_id: str) -> bool:
@@ -1905,7 +1921,10 @@ class SspanelExecutorStore:
             row_selector = row.get("accountSelector") or {}
             row_account_ids = set(row_selector.get("accountIds") or [])
             if account_ids & row_account_ids:
-                self.release_account_leases(job_id)
+                if in_transaction:
+                    self._release_account_leases_in_transaction(job_id)
+                else:
+                    self.release_account_leases(job_id)
                 raise HTTPException(status_code=409, detail="Instagram account already has an active write job")
 
     def acquire_account_leases(self, account_ids: list[str], job_id: str) -> None:
@@ -1936,8 +1955,12 @@ class SspanelExecutorStore:
             self.accounts.replace_row_in_transaction(row_id, updated)
 
     def release_account_leases(self, job_id: str) -> None:
+        with self.db.transaction():
+            self._release_account_leases_in_transaction(job_id)
+
+    def _release_account_leases_in_transaction(self, job_id: str) -> None:
         for account in self.accounts.search(Query().leaseJobId == job_id):
-            self.accounts.update(
+            self.accounts.update_in_transaction(
                 {"leaseJobId": None, "leaseExpiresAt": None, "updatedAt": _utc_now()},
                 Query().executorAccountId == account["executorAccountId"],
             )

@@ -41,13 +41,18 @@ uv run ruff check aiograpi_rest tests
 
 ## Adding a capability
 
+The canonical schema lists known platform actions. This executor advertises
+only its implemented subset: the sync script checks agreement between
+`ActionType`, `CAPABILITY_INPUT_SCHEMAS`, and `execute_supported_job` before
+filtering the canonical action and implemented-capability enums. Other protocol
+enums remain synchronized exactly. A known canonical action such as
+`instagram.media.like` stays absent until this executor implements it.
+
 1. Add the action to the canonical schema and toolkit constants.
-2. Regenerate `aiograpi_rest/sspanel_contract.json`.
-3. Implement the facade validation, worker operation, and normalized events.
-4. Add the capability to `instagramImplementedCapabilities` only when the
-   operation is executable in the deployed module.
-5. Add contract, idempotency, restart, policy, lease, error, and redaction
-   tests before advertising it in the manifest.
+2. Implement the facade validation, input schema, worker operation, and normalized events.
+3. Add contract, idempotency, restart, policy, lease, error, and redaction tests.
+4. Regenerate `aiograpi_rest/sspanel_contract.json`; only executable operations
+   belong in `instagramImplementedCapabilities` and the module manifest.
 
 The Instagram reference module currently advertises these direct capabilities:
 

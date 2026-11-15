@@ -1,7 +1,9 @@
 import asyncio
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+from threading import Barrier
 
 import pytest
 from aiograpi import exceptions as aiograpi_exceptions
@@ -565,6 +567,234 @@ def test_policy_capacity_is_idempotent_per_workflow_and_incremental_for_warmup(t
         assert first_warmup["reservedUnits"] == 1
         assert second_warmup["reservedUnits"] == 2
         assert second_warmup["reservations"][0]["amount"] == 1
+    finally:
+        store.close()
+
+
+@pytest.mark.parametrize("daily_limit", [2, 3])
+def test_warmup_claim_reservations_survive_checkpoints_and_restarts(tmp_path, daily_limit):
+    path = tmp_path / "warmup-checkpoints.sqlite3"
+    store = sspanel.SspanelExecutorStore(str(path))
+    try:
+        account_id = store.import_account(sspanel.ImportSessionRequest(username="checkpoint_user"))["executorAccountId"]
+        request = sspanel.JobStartRequest(
+            idempotencyKey="warmup:three-checkpoints",
+            orderId=1,
+            platform="instagram",
+            actionType="instagram.warmup",
+            quantity=3,
+            accountSelector={"mode": "specific", "accountIds": [account_id]},
+            payload={"actionMix": ["instagram.account.health"]},
+            policyEnvelope={
+                "policyVersion": "policy-v1",
+                "actionLimits": {"instagram.warmup": {"daily": daily_limit}},
+            },
+        )
+        job = store.create_job(request)
+        for checkpoint in range(3):
+            store.update_job(job["jobId"], {"status": "queued", "completedCount": checkpoint})
+            claimed = store.claim_next_job(f"worker-{checkpoint}")
+            persisted = store.find_job(job["jobId"])
+            if checkpoint < daily_limit:
+                assert claimed is not None
+                assert claimed["policyReservedUnits"] == checkpoint + 1
+                assert persisted["policyReservedUnits"] == checkpoint + 1
+            else:
+                assert claimed is None
+                assert persisted["status"] == "paused"
+                assert persisted["errorCode"] == "POLICY_LIMIT_REACHED"
+                assert persisted["policyReservedUnits"] == daily_limit
+            assert [row["used"] for row in store.usage.all()] == [min(checkpoint + 1, daily_limit)]
+            store.close()
+            store = sspanel.SspanelExecutorStore(str(path))
+    finally:
+        store.close()
+
+
+def test_concurrent_policy_reservations_ignore_stale_job_snapshots(tmp_path):
+    path = tmp_path / "concurrent-reservations.sqlite3"
+    stores = [sspanel.SspanelExecutorStore(str(path)) for _ in range(2)]
+    try:
+        account_id = stores[0].import_account(sspanel.ImportSessionRequest(username="reservation_user"))["executorAccountId"]
+        request = sspanel.JobStartRequest(
+            idempotencyKey="policy:concurrent-reservation",
+            orderId=1,
+            platform="instagram",
+            actionType="instagram.account.health",
+            quantity=1,
+            accountSelector={"mode": "specific", "accountIds": [account_id]},
+            payload={},
+            policyEnvelope={
+                "policyVersion": "policy-v1",
+                "actionLimits": {"instagram.account.health": {"hourly": 1, "daily": 1}},
+            },
+        )
+        stale_job = stores[0].create_job(request)
+        barrier = Barrier(2)
+
+        def reserve(store):
+            barrier.wait(timeout=5)
+            return store.reserve_policy_capacity(request, stale_job)
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(reserve, stores))
+        assert [result["reservedUnits"] for result in results] == [1, 1]
+        assert sorted(len(result["reservations"]) for result in results) == [0, 2]
+        assert sorted(row["used"] for row in stores[0].usage.all()) == [1, 1]
+        assert stores[0].find_job(stale_job["jobId"])["policyReservedUnits"] == 1
+    finally:
+        for store in stores:
+            store.close()
+
+
+def test_concurrent_claims_have_one_winner_and_one_reservation(tmp_path, monkeypatch):
+    path = tmp_path / "concurrent-claims.sqlite3"
+    stores = [sspanel.SspanelExecutorStore(str(path)) for _ in range(2)]
+    try:
+        account_id = stores[0].import_account(sspanel.ImportSessionRequest(username="claim_user"))["executorAccountId"]
+        request = sspanel.JobStartRequest(
+            idempotencyKey="policy:concurrent-claim",
+            orderId=1,
+            platform="instagram",
+            actionType="instagram.warmup",
+            quantity=3,
+            accountSelector={"mode": "specific", "accountIds": [account_id]},
+            payload={"actionMix": ["instagram.account.health"]},
+            policyEnvelope={
+                "policyVersion": "policy-v1",
+                "actionLimits": {"instagram.warmup": {"daily": 3}},
+            },
+        )
+        job = stores[0].create_job(request)
+        barrier = Barrier(2)
+
+        def synchronize_candidates(original):
+            first_read = True
+
+            def candidates():
+                nonlocal first_read
+                jobs = original()
+                if first_read:
+                    first_read = False
+                    barrier.wait(timeout=5)
+                return jobs
+            return candidates
+
+        for store in stores:
+            monkeypatch.setattr(store.jobs, "all", synchronize_candidates(store.jobs.all))
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(store.claim_next_job, f"worker-{index}") for index, store in enumerate(stores)]
+            claimed = [future.result(timeout=10) for future in futures]
+        assert sum(job is not None for job in claimed) == 1
+        persisted = stores[0].find_job(job["jobId"])
+        assert persisted["policyReservedUnits"] == 1
+        assert persisted["attempts"] == 1
+        assert [event["eventType"] for event in persisted["events"]].count("job.started") == 1
+        assert [row["used"] for row in stores[0].usage.all()] == [1]
+    finally:
+        for store in stores:
+            store.close()
+
+
+@pytest.mark.parametrize("daily_limit", [1, 3])
+@pytest.mark.parametrize("selector_mode", ["specific", "system"])
+@pytest.mark.parametrize("winner_status", ["running", "queued"])
+def test_stale_claim_loser_cannot_mutate_a_winner(tmp_path, monkeypatch, daily_limit, selector_mode, winner_status):
+    path = tmp_path / "stale-claim.sqlite3"
+    winner = sspanel.SspanelExecutorStore(str(path))
+    loser = sspanel.SspanelExecutorStore(str(path))
+    try:
+        account_id = winner.import_account(sspanel.ImportSessionRequest(username="stale_claim_user"))["executorAccountId"]
+        selector = (
+            {"mode": "specific", "accountIds": [account_id]}
+            if selector_mode == "specific"
+            else {"mode": "system", "constraints": {"allowedExecutorAccountIds": [account_id]}}
+        )
+        request = sspanel.JobStartRequest(
+            idempotencyKey="policy:stale-claim",
+            orderId=1,
+            platform="instagram",
+            actionType="instagram.warmup",
+            quantity=3,
+            accountSelector=selector,
+            payload={"actionMix": ["instagram.account.health"]},
+            policyEnvelope={
+                "policyVersion": "policy-v1",
+                "actionLimits": {"instagram.warmup": {"daily": daily_limit}},
+            },
+        )
+        job = winner.create_job(request)
+        original_candidates = loser.jobs.all
+
+        first_read = True
+
+        def candidates_before_winner_progress():
+            nonlocal first_read
+            stale_jobs = original_candidates()
+            if first_read:
+                first_read = False
+                claimed = winner.claim_next_job("winner")
+                assert claimed is not None
+                winner.update_job(job["jobId"], {
+                    "status": winner_status,
+                    "completedCount": 1,
+                    "nextRunAt": sspanel._utc_after_seconds(3600),
+                    "result": {"cursor": 1},
+                })
+            return stale_jobs
+
+        monkeypatch.setattr(loser.jobs, "all", candidates_before_winner_progress)
+        assert loser.claim_next_job("loser") is None
+        persisted = winner.find_job(job["jobId"])
+        assert persisted["status"] == winner_status
+        assert not sspanel._is_due(persisted["nextRunAt"])
+        assert persisted["workerId"] == "winner"
+        assert persisted["attempts"] == 1
+        assert persisted["completedCount"] == 1
+        assert persisted["result"] == {"cursor": 1}
+        assert persisted["policyReservedUnits"] == 1
+        assert persisted["assignedAccountIds"] == [account_id]
+        assert winner.get_account(account_id)["leaseJobId"] == job["jobId"]
+        assert [row["used"] for row in winner.usage.all()] == [1]
+        event_types = [event["eventType"] for event in persisted["events"]]
+        assert event_types.count("job.started") == 1
+        assert "workflow.paused" not in event_types
+    finally:
+        winner.close()
+        loser.close()
+
+
+@pytest.mark.parametrize("window", ["hourly", "daily"])
+def test_policy_rejection_does_not_partially_reserve_accounts_or_windows(tmp_path, window):
+    store = sspanel.SspanelExecutorStore(str(tmp_path / "policy-rejection.sqlite3"))
+    try:
+        account_ids = sorted(
+            store.import_account(sspanel.ImportSessionRequest(username=username))["executorAccountId"]
+            for username in ("available_user", "exhausted_user")
+        )
+        limits = {"hourly": 2, "daily": 2, window: 1}
+        seed_request = sspanel.JobStartRequest(
+            idempotencyKey="policy:seed",
+            orderId=1,
+            platform="instagram",
+            actionType="instagram.account.health",
+            quantity=1,
+            accountSelector={"mode": "specific", "accountIds": [account_ids[1]]},
+            payload={},
+            policyEnvelope={"policyVersion": "policy-v1", "actionLimits": {"instagram.account.health": limits}},
+        )
+        seed_job = store.create_job(seed_request)
+        store.reserve_policy_capacity(seed_request, seed_job)
+        before = store.usage.all()
+        rejected_request = seed_request.model_copy(update={
+            "idempotencyKey": "policy:rejected",
+            "accountSelector": sspanel.AccountSelector(mode="specific", accountIds=account_ids),
+        })
+        rejected_job = store.create_job(rejected_request)
+        rejection = store.reserve_policy_capacity(rejected_request, rejected_job)
+        assert rejection["code"] == "POLICY_LIMIT_REACHED"
+        assert store.usage.all() == before
+        assert "policyReservedUnits" not in store.find_job(rejected_job["jobId"])
     finally:
         store.close()
 
@@ -1254,6 +1484,36 @@ def test_executor_account_write_lease_blocks_until_terminal_job(tmp_path):
         third = first.model_copy(update={"idempotencyKey": "instagram:write:3", "orderId": 3})
         released_job = store.create_job(third)
         assert released_job["assignedAccountIds"] == [account["executorAccountId"]]
+    finally:
+        store.close()
+
+
+def test_expired_lease_does_not_allow_overlapping_active_write_job(tmp_path):
+    store = sspanel.SspanelExecutorStore(str(tmp_path / "expired-lease-overlap.sqlite3"))
+    try:
+        account_id = store.import_account(sspanel.ImportSessionRequest(username="expired_lease_user"))["executorAccountId"]
+        request = sspanel.JobStartRequest(
+            idempotencyKey="lease:active-write",
+            orderId=1,
+            platform="instagram",
+            actionType="instagram.warmup",
+            quantity=1,
+            accountSelector={"mode": "specific", "accountIds": [account_id]},
+            payload={"actionMix": ["instagram.account.health"]},
+        )
+        original_job = store.create_job(request)
+        store.accounts.update(
+            {"leaseExpiresAt": "2000-01-01T00:00:00Z"},
+            sspanel.Query().executorAccountId == account_id,
+        )
+        account_before = store.get_account(account_id)
+        overlapping = request.model_copy(update={"idempotencyKey": "lease:overlapping-write"})
+        with pytest.raises(HTTPException) as error:
+            store.create_job(overlapping)
+        assert error.value.status_code == 409
+        assert store.find_job_by_idempotency(overlapping.idempotencyKey) is None
+        assert store.find_job(original_job["jobId"])["status"] == "queued"
+        assert store.get_account(account_id) == account_before
     finally:
         store.close()
 
