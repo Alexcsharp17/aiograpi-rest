@@ -27,7 +27,7 @@ router = APIRouter(
 @router.get("/download")
 async def video_download(sessionid: str = Depends(get_sessionid),
                          media_pk: int = Query(...),
-                         folder: Optional[Path] = Query(""),
+                         folder: Optional[Path] = Query(Path(".")),
                          returnFile: Optional[bool] = Query(True),
                          clients: ClientStorage = Depends(get_clients)):
     """Download video using media pk
@@ -44,7 +44,7 @@ async def video_download(sessionid: str = Depends(get_sessionid),
 async def video_download_by_url(sessionid: str = Depends(get_sessionid),
                          url: str = Query(...),
                          filename: Optional[str] = Query(""),
-                         folder: Optional[Path] = Query(""),
+                         folder: Optional[Path] = Query(Path(".")),
                          returnFile: Optional[bool] = Query(True),
                          clients: ClientStorage = Depends(get_clients)):
     """Download video using URL

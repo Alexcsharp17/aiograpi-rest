@@ -25,22 +25,34 @@ uv run ruff check aiograpi_rest tests
 - `idempotencyKey` is required for every start and workflow input request.
 - `accountSelector` refers to opaque executor account IDs; the panel stores
   only a binding and public projection.
+- A `system` selector is constrained by the panel's
+  `allowedExecutorAccountIds` list. The executor chooses one currently
+  available account from that pool, records it in `assignedAccountIds`, and
+  applies the same lease rules as a `specific` assignment.
 - Sessions, cookies, passwords, and proxy credentials remain in encrypted
   executor storage.
 - Provider errors become typed external statuses and terminal challenge/login
   states stop retries.
+- Policy capacity reservations are durable and idempotent per execution phase;
+  a managed workflow does not consume the same allowance again when it resumes
+  after content input, while warmup reserves one new unit per checkpoint.
 - Progress events are bounded summaries. Full comment, DM, and credential
   payloads must never be written to logs or panel-facing results.
 
 ## Adding a capability
 
+The canonical schema lists known platform actions. This executor advertises
+only its implemented subset: the sync script checks agreement between
+`ActionType`, `CAPABILITY_INPUT_SCHEMAS`, and `execute_supported_job` before
+filtering the canonical action and implemented-capability enums. Other protocol
+enums remain synchronized exactly. A known canonical action such as
+`instagram.media.like` stays absent until this executor implements it.
+
 1. Add the action to the canonical schema and toolkit constants.
-2. Regenerate `aiograpi_rest/sspanel_contract.json`.
-3. Implement the facade validation, worker operation, and normalized events.
-4. Add the capability to `instagramImplementedCapabilities` only when the
-   operation is executable in the deployed module.
-5. Add contract, idempotency, restart, policy, lease, error, and redaction
-   tests before advertising it in the manifest.
+2. Implement the facade validation, input schema, worker operation, and normalized events.
+3. Add contract, idempotency, restart, policy, lease, error, and redaction tests.
+4. Regenerate `aiograpi_rest/sspanel_contract.json`; only executable operations
+   belong in `instagramImplementedCapabilities` and the module manifest.
 
 The Instagram reference module currently advertises these direct capabilities:
 

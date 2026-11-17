@@ -25,7 +25,7 @@ router = APIRouter(
 @router.get("/download")
 async def igtv_download(sessionid: str = Depends(get_sessionid),
                          media_pk: int = Query(...),
-                         folder: Optional[Path] = Query(""),
+                         folder: Optional[Path] = Query(Path(".")),
                          returnFile: Optional[bool] = Query(True),
                          clients: ClientStorage = Depends(get_clients)):
     """Download IGTV video using media pk
@@ -42,7 +42,7 @@ async def igtv_download(sessionid: str = Depends(get_sessionid),
 async def igtv_download_by_url(sessionid: str = Depends(get_sessionid),
                          url: str = Query(...),
                          filename: Optional[str] = Query(""),
-                         folder: Optional[Path] = Query(""),
+                         folder: Optional[Path] = Query(Path(".")),
                          returnFile: Optional[bool] = Query(True),
                          clients: ClientStorage = Depends(get_clients)):
     """Download IGTV video using URL

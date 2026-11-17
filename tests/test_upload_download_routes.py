@@ -1063,3 +1063,47 @@ async def test_album_upload(storage):
         )
     assert response.status_code == 200
     assert any(call[0] == "album_upload" for call in storage.client.calls)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("route", "query", "method", "provider_args", "returns_list"),
+    [
+        ("/photo/download", {"media_pk": "17"}, "photo_download", (17,), False),
+        ("/photo/download/by/url", {"url": "https://example.test/media"}, "photo_download_by_url", ("https://example.test/media", ""), False),
+        ("/video/download", {"media_pk": "17"}, "video_download", (17,), False),
+        ("/video/download/by/url", {"url": "https://example.test/media"}, "video_download_by_url", ("https://example.test/media", ""), False),
+        ("/clip/download", {"media_pk": "17"}, "clip_download", (17,), False),
+        ("/clip/download/by/url", {"url": "https://example.test/media"}, "clip_download_by_url", ("https://example.test/media", ""), False),
+        ("/igtv/download", {"media_pk": "17"}, "igtv_download", (17,), False),
+        ("/igtv/download/by/url", {"url": "https://example.test/media"}, "igtv_download_by_url", ("https://example.test/media", ""), False),
+        ("/story/download", {"story_pk": "17"}, "story_download", (17, ""), False),
+        ("/story/download/by/url", {"url": "https://example.test/media"}, "story_download_by_url", ("https://example.test/media", ""), False),
+        ("/album/download", {"media_pk": "17"}, "album_download", (17,), True),
+        ("/album/download/by/urls", {"urls": ["https://example.test/media"]}, "album_download_by_urls", (["https://example.test/media"],), True),
+        ("/track/download/by/url", {"url": "https://example.test/media"}, "track_download_by_url", ("https://example.test/media", ""), False),
+    ],
+)
+@pytest.mark.parametrize(
+    ("folder_query", "expected_folder"),
+    [(None, Path(".")), ("", Path(".")), ("downloads/media", Path("downloads/media"))],
+)
+async def test_download_routes_preserve_typed_folder_defaults_and_explicit_queries(
+    storage, monkeypatch, route, query, method, provider_args, returns_list, folder_query, expected_folder,
+):
+    calls = []
+
+    async def download(*args):
+        calls.append(args)
+        return [Path("fictional-download")] if returns_list else Path("fictional-download")
+
+    monkeypatch.setattr(storage.client, method, download, raising=False)
+    params = {"sessionid": "sid", "returnFile": "false", **query}
+    if folder_query is not None:
+        params["folder"] = folder_query
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.get(route, params=params)
+    assert response.status_code == 200
+    assert response.json() == (["fictional-download"] if returns_list else "fictional-download")
+    assert calls == [(*provider_args, expected_folder)]
+    assert isinstance(calls[0][-1], Path)

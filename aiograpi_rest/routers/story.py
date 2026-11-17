@@ -304,7 +304,7 @@ async def story_users(
 async def story_download(sessionid: str = Depends(get_sessionid),
                          story_pk: int = Query(...),
                          filename: Optional[str] = Query(""),
-                         folder: Optional[Path] = Query(""),
+                         folder: Optional[Path] = Query(Path(".")),
                          returnFile: Optional[bool] = Query(True),
                          clients: ClientStorage = Depends(get_clients)):
     """Download story media by media_type
@@ -321,7 +321,7 @@ async def story_download(sessionid: str = Depends(get_sessionid),
 async def story_download_by_url(sessionid: str = Depends(get_sessionid),
                                 url: str = Query(...),
                                 filename: Optional[str] = Query(""),
-                                folder: Optional[Path] = Query(""),
+                                folder: Optional[Path] = Query(Path(".")),
                                 returnFile: Optional[bool] = Query(True),
                                 clients: ClientStorage = Depends(get_clients)):
     """Download story media using URL
